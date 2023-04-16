@@ -10,7 +10,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many suburban municipalities. TALK ABOUT ITS POPULATION AND THE SURROUNDING SUBURBS POP'NS.
+## Alternate Introduction 
+
+Southern Texas's "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many municipalities [Cite]. The population of the metropolitan and its suburbs generates much automobile traffic; getting to cities in and around Houston can take hours during the work-school "rush hours". Due to Houston's size and considerable traffic, people feel rushed, break the speed limit laws, and get pulled over. Conveniently, Houston police departments provide their traffic stop data to the Stanford Policing Project who open-sourced the data via their website [Cite].
 
 ## Introduction
 
@@ -19,11 +21,17 @@ Houston is an enormous metropolitan completely surrounded by suburban areas, den
 
 ## Problem
 
-Size and roads cause tons of traffic, accidents. Size is so big it takes forever to get places
+Size and roads cause tons of traffic, accidents. Size is so big it takes forever to get places.
+
+Houston's expanse causes tiring, daily commutes that implore breaking speed limit laws. The posted speed limits in Houston are fair, but only because the roads are tiny in hugely populated, high-traffic areas, so there is little room for driving error around the city.
+
+Houston's Highway Transit System (HTS) infrastructure is flawed. 
 
 ## Purpose
 
-See if a Bayesian analysis works on the data
+See if a Bayesian analysis works on the data. If frequentist method yields differently.
+
+Look at the proportion of speed to posted speed limit of people who were stopped by a police officer.
 
 ```{r libraries}
 library(dplyr, quietly = T)
