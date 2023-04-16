@@ -1,5 +1,6 @@
 ---
 title: "Houston Drivers Rough"
+subtitle: "A Bayesian Analysis of Moving Violations in Houston"
 author: "Will Curkan"
 date: "2023-04-15"
 output: html_document
@@ -9,22 +10,26 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+The "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many suburban municipalities. TALK ABOUT ITS POPULATION AND THE SURROUNDING SUBURBS POP'NS.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Introduction
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+Houston is an enormous metropolitan completely surrounded by suburban areas, denoted "the greater Houston area". The population and the automobile traffic it generates, getting from a suburban area on the south side to one on the north side can consume, more-or-less, an hour and a half of time. With this said, there are lots of cars which means lots of people rushing to get from one municipality or suburb to another, or to go in and out of Houston proper. The want to get from point A to point B in the 665 square mile city causes a subconscious anxiety and desire to rush, which causes police to give many speeding violations. Conveniently, police frequently record the speed of the offender and the posted speed limit when writing a citation, and this data is available via the Stanford Open Policing Project, which the Houston police department participates with in open-sourcing their data.
+
+## Problem
+
+Size and roads cause tons of traffic, accidents. Size is so big it takes forever to get places
+
+## Purpose
+
+See if a Bayesian analysis works on the data
+
+```{r libraries}
+library(dplyr, quietly = T)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r data}
+data <- read.csv('tx_houston_2023_01_26.csv')
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
