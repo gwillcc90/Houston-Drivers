@@ -22,6 +22,7 @@ Only look at type because problem is pretty open otherwise. Look at Traffic viol
 Questions about speeding in HOUSTON?
 - Mean ratio of speed to posted speed to negate the differences between high/low speed limits
   - Normal normal
+  - Due to the skewedness of the data, Normal Normal should be a bad assumption
 - Mean time between speeding stops
   - GammaExp
 - Number per day
@@ -45,18 +46,6 @@ data <- read.csv('tx_houston_2023_01_26.csv')
 colnames(data)
 ```
 
-```{r}
-data %>%
-  group_by(type) %>%
-  summarize(num_stops = n_distinct(time))
-```
-
-```{r}
-data %>%
-  group_by(violation) %>%
-  summarize(n_vio = n_distinct(violation))
-```
-
 ```{r rawSpeed_postedSpeed_raio}
 # ratio of raw speed to posted speed limit
 raw_posted_ratio <- data$speed / data$posted_speed
@@ -65,42 +54,36 @@ raw_posted_ratio <- data$speed / data$posted_speed
 # due to an undocumented speed (could be many reasons like it not being a speeding violation, or officer error)
 raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
 
-raw_posted_ratio[1:5]
-length(raw_posted_ratio)
-```
-
-```{r point_estimate_mean_ratio}
+# point estimate
 mean(raw_posted_ratio)
 # People stopped are going approximately 34% higher than the speed limit
 ```
 
 ```{r}
-# c <- data %>%
-#   filter(type == 'vehicular') %>%
-#   select(speed, posted_speed) %>%
-#   filter(!is.na(speed))
-
-data
-
-# d <- c$speed - c$posted_speed
-# sum(d != 0)
+hist(raw_posted_ratio, breaks = 10000)
 ```
 
 ```{r}
-NA == TRUE
+ r <- raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
 ```
 
-```{r}
-# Features to keep
-keep <- c('date', 'time', 'subject_age', 'subject_race', 'subject_sex',
-          'type', 'violation', 'arrest_made', 'citation_issued', )
-# Subset dataframe with only features to keep
-df <- data %>%
-  select()
+```{r, warning = F}
+max(raw_posted_ratio[-which(raw_posted_ratio == max(raw_posted_ratio))])
+
+#hist(r, breaks = 50)
+
+n <- length(raw_posted_ratio)
+N <- 10^4
+
+xbar <- numeric(N)
+
+for (i in 1:N)
+{
+  s <- sample(raw_posted_ratio, n, replace = T)
+  xbar[i] <- s
+}
+
+mean(xbar)
 ```
 
-```{r}
-v <- data %>%
-  group_by(date) %>%
-  summarize(num_stops = n_distinct(time))
-```
+
