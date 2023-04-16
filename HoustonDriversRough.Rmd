@@ -29,9 +29,7 @@ Houston's Highway Transit System (HTS) infrastructure is flawed.
 
 ## Purpose
 
-See if a Bayesian analysis works on the data. If frequentist method yields differently.
-
-Look at the proportion of speed to posted speed limit of people who were stopped by a police officer.
+The purpose is to compare the results of a Frequentist analysis and a Bayesian analysis on people stopped by a police officer to hypothesize solutions to traffic problems. The metrics analyzed are: the ratio of actual speed versus posted speed limit, the time between traffic stops, and the number of stops per day.
 
 ```{r libraries}
 library(dplyr, quietly = T)
