@@ -44,6 +44,7 @@ Actually, I got pulled over once, back in the day, and I recall the "Average spe
 ```{r libraries}
 library(dplyr, quietly = T)
 library(ggplot2)
+library(rjags)
 ```
 
 ```{r data}
@@ -66,7 +67,7 @@ raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
 ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_histogram(bins = 250) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
-            color="blue", linetype="dashed", size=1)
+            color="blue", linetype="dashed", linewidth=1)
 ```
 
 There's a huge problem with this distribution: some values are over double and triple the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. On an even bigger scale, if someone got caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
@@ -82,12 +83,74 @@ We will only consider persons travelling one to two-and-a-half times the speed l
 raw_posted_ratio <- 
   raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
 
-ggplot(NULL, aes(x=raw_posted_ratio)) +
-  geom_histogram(bins = 250) +
-  geom_vline(aes(xintercept=mean(raw_posted_ratio)),
-            color="blue", linetype="dashed", size=1)
+ggplot(NULL, aes(x=log(raw_posted_ratio))) +
+  geom_histogram(bins = 50) +
+  geom_vline(aes(xintercept=mean(log(raw_posted_ratio))),
+            color="blue", linetype="dashed", linewidth=1)
 ```
 
+boot mean.
+
+Use lab 8, 9 for reference from stat3333
+
+```{r}
+n <- length(raw_posted_ratio) * .5
+
+N <- 10^4
+
+boot_means <- numeric(N)
+
+for (i in 1:N)
+{
+  boot_means[i] <- mean(sample(raw_posted_ratio, n, replace = T))
+}
+
+hist(boot_means)
+
+qqnorm(boot_means)
+qqline(boot_means)
+
+mean(boot_means)
+sd(boot_means)
+```
+
+```{r}
+
+n <- length(raw_posted_ratio)
+
+model_string <- "model{
+
+  # Likelihood
+  for (i in 1:n){
+    x[i] ~ dnorm(theta, 1 / sigma ^ 2)
+  }
+  sigma <- 600
+  
+
+  # Prior
+  theta ~ dnorm(mu0, 1 / tau0 ^ 2)
+  mu0 <- 3000  
+  tau0 <- 150
+
+}"
+
+# Compile the model
+dataList = list(x=raw_posted_ratio, n=n)
+model <- jags.model(textConnection(model_string),
+                    data=dataList,
+                    n.chains=5) 
+
+update(model, 1000, progress.bar="none")
+
+posterior_sample <- coda.samples(model, 
+                                 variable.names=c("theta"),
+                                 n.iter=Nrep,
+                                 progress.bar="none")
+# Summarize and check diagnostics
+summary(posterior_sample)
 
 
+## --------------------------------
+plot(posterior_sample)
+```
 
