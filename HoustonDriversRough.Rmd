@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = T)
 
 ## Alternate Introduction 
 
-Southern Texas's "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many municipalities [Cite]. The population of the metropolitan and its suburbs generates much automobile traffic; getting to cities in and around Houston can take hours during the work-school "rush hours". Due to Houston's size and considerable traffic, people feel rushed, break the speed limit laws, and get pulled over. Conveniently, Houston police departments provide their traffic stop data to the Stanford Policing Project who open-sourced the data via their website [Cite].
+Southern Texas's "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many municipalities [Cite]. The population of the metropolitan and its suburbs generates much automobile traffic; getting to cities in and around Houston can take hours during the work-school "rush hours". Due to Houston's size and considerable traffic, people feel rushed, break the speed limit laws, and get pulled over. Conveniently, Houston police departments provide their traffic-stop data to the Stanford Policing Project that open-sources the data via their website [Cite].
 
 MAYBE PUT INFO ABOUT DATASET HERE TO FILL FIRST PAGE.
 
@@ -27,23 +27,30 @@ Houston is an enormous metropolitan completely surrounded by suburban areas, den
 
 Size and roads cause tons of traffic, accidents. Size is so big it takes forever to get places.
 
-Houston's expanse causes tiring, daily commutes that implore breaking speed limit laws. The posted speed limits in Houston are fair, but only because the roads are tiny in hugely populated, high-traffic areas, so there is little room for driving error around the city.
+Houston's expanse causes tiring, daily commutes that implore breaking speed limit laws. The posted speed limits in Houston are fair, but only because the roads are tiny [[in hugely populated, high-traffic areas, so there is little room for driving error around the city.]]
 
 Houston's Highway Transit System (HTS) infrastructure is flawed. 
 
 ### Purpose
 
-The purpose is to compare the results of a Frequentist analysis and a Bayesian analysis on people stopped by a police officer to hypothesize solutions to traffic problems. The metrics analyzed are: the ratio of actual speed versus posted speed limit, the time between traffic stops, and the number of stops per day.
+The purpose is to compare the results of a Frequentist analysis and a Bayesian analysis on people stopped by a police officer to hypothesize solutions to traffic problems. The metrics analyzed are: 
+
+- the ratio of actual speed versus posted speed limit, the time between traffic stops, and the number of stops per day.
+
+Actually, I got pulled over once, back in the day, and I recall the "Average speed" in a 60mph area was 75. Given this small amount of data, I'll assume that +25% speed is the $\mu$ with a deviation of something...
 
 ## Results and Discussion
 
 ```{r libraries}
-# library(dplyr, quietly = T)
+library(dplyr, quietly = T)
+library(ggplot2)
 ```
 
 ```{r data}
-# data <- read.csv('tx_houston_2023_01_26.csv')
+data <- read.csv('tx_houston_2023_01_26.csv')
 ```
+
+### EDA
 
 ```{r rawSpeed_postedSpeed_ratio}
 # ratio of raw speed to posted speed limit
@@ -55,11 +62,30 @@ raw_posted_ratio <- data$speed / data$posted_speed
 # being a speeding violation, or officer error)
 raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
 
+# Dont need to input a dataframe: NULL
+ggplot(NULL, aes(x=raw_posted_ratio)) +
+  geom_histogram(bins = 250) +
+  geom_vline(aes(xintercept=mean(raw_posted_ratio)),
+            color="blue", linetype="dashed", size=1)
+```
+
+There's a huge problem with this distribution: some values are over double and triple the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. On an even bigger scale, if someone got caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
+
+The dataset also considers people travelling under the speed limit, which means there were probably pulled over for something other than speeding.
+
+We will only consider persons travelling one to two-and-a-half times the speed limit.
+
+```{r}
 # 611k observations in this range!
 # There's 365 less than 1
 # There's only 133 ratios over 2.5x
 raw_posted_ratio <- 
-  raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio > 2.5)]
+  raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
+
+ggplot(NULL, aes(x=raw_posted_ratio)) +
+  geom_histogram(bins = 250) +
+  geom_vline(aes(xintercept=mean(raw_posted_ratio)),
+            color="blue", linetype="dashed", size=1)
 ```
 
 
