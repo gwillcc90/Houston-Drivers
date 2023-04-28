@@ -321,11 +321,11 @@ model <- jags.model(textConnection(model_string),
                     data=dataList,
                     n.chains=5, quiet = T) 
 
-update(model, 1000, progress.bar="none")
+update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu"),
-                                 n.iter=10000,
+                                 variable.names=c("mu", 'sigma'),
+                                 n.iter=100000,
                                  progress.bar="none")
 # Summarize and check diagnostics
 summary(posterior_sample)
@@ -338,8 +338,28 @@ plot(posterior_sample)
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg",
+diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
 saveType = "jpg")
+
+#######################################################
+########### POSTERIOR PREDICTIVE DISTRIBUTION #########
+#######################################################
+
+# theta_sim = as.matrix(posterior_sample)
+# x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], theta_sim[, "sigma"])
+# quantile(x_sim, c(0.025, 0.975))
+# hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
+#      main = "Posterior preditive distribution")
+# lines(density(x_sim))
+# abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+
+theta_sim = as.matrix(posterior_sample)
+x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], 0.2696776)#, theta_sim[, "sigma"])
+quantile(x_sim, c(0.025, 0.975))
+hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
+     main = "Posterior preditive distribution")
+lines(density(x_sim))
+abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
 
@@ -395,12 +415,10 @@ plot(posterior_sample)
 
 # diagMCMC(posterior_sample,saveName = "diagMCMCeg",
 # saveType = "jpg")
-
-set.seed(984673)
 theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], theta_sim[, "sigma"])
 quantile(x_sim, c(0.025, 0.975))
-hist(x_sim, freq = FALSE, xlab = "Body temperature (degrees F)",
+hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
