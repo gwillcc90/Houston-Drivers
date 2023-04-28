@@ -36,39 +36,41 @@ Houston's Highway Transit System (HTS) infrastructure is flawed.
 
 The purpose is to compare the results of a Frequentist analysis and a Bayesian analysis on people stopped by a police officer to hypothesize solutions to traffic problems. The metrics analyzed are: 
 
+QUESTION 1:
+
 - the ratio of actual speed versus posted speed limit, the time between traffic stops, and the number of stops per day.
 
 Actually, I got pulled over once, back in the day, and I recall the "Average speed" in a 60mph area was 75. Given this small amount of data, I'll assume that +25% speed is the $\mu$ with a deviation of something...
 
+QUESTION 2:
+
+- Is there a difference among people driving different national brands of cars?
+
+QUESTION 3:
+
+
+
 ## Results and Discussion
 
-```{r libraries}
+```{r LIBRARIES, message = F, warning = F}
 library(dplyr, quietly = T)
 library(ggplot2)
 library(rjags)
 source("DBDA2E-utilities.R")
 ```
 
-```{r data}
+```{r DATA}
 data <- read.csv('tx_houston_2023_01_26.csv')
 ```
 
-```{r}
-data = data %>%
-  filter(posted_speed >= 60, speed <= 150)
+We're intially interested in the distribution of the speed ratio. Let's check out the histogram.
 
-qqnorm(data$speed)
-qqline(data$speed)
-
-head(data)
+```{r COLNAMES SPARE}
+colnames(data)
 ```
 
 
-### EDA
-
-THE RANGE OF THE SPEED LIMIT IS TOO LARGE
-
-```{r rawSpeed_postedSpeed_ratio}
+```{r INITIAL RATIO HIST}
 # ratio of raw speed to posted speed limit
 raw_posted_ratio <- data$speed / data$posted_speed
 
@@ -82,42 +84,133 @@ raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
 ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_histogram(bins = 250) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
-            color="blue", linetype="dashed", linewidth=1)
+            color="blue", linetype="dashed", linewidth=1) +
+  labs(title = 'Ratio of Raw Speed vs. Posted Speed Limit', x = 'Ratio')
 ```
 
-There's a huge problem with this distribution: some values are over double and triple the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. On an even bigger scale, if someone got caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
+```{r INITIAL RATIO SUMMARY}
+summary(data$speed[!is.na(data$speed)])
+```
 
-The dataset also considers people travelling under the speed limit, which means there were probably pulled over for something other than speeding.
 
-We will only consider persons travelling one to two-and-a-half times the speed limit.
+There's a huge problem with this distribution: some values are over double, triple, and even 15 times the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. Further, if someone is caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
 
-```{r}
-# 611k observations in this range!
-# There's 365 less than 1
-# There's only 133 ratios over 2.5x
-raw_posted_ratio <- 
-  raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
+We will consider only vehicles meeting two conditions:
+- found to be speeding: their logged speed exceeds the posted speed limit
+  - `speed` > `posted_speed`
+- Speed is less than 155MPH: the governed speed
+  - `speed` $\leq$ 155
 
+`speed` > `posted_speed`
+
+-----The dataset also considers people travelling under the speed limit, which means there were probably pulled over for something other than speeding. These observations are removed as well.------
+
+```{r FILTERED DATASET}
+# 155 is the governed speed
+# must be speeding; speed > posted_speed
+data = data %>%
+  filter(speed <= 155, speed > posted_speed)
+
+# hist(data$speed)
+# 
+# nrow(data)
+
+# qqnorm(data$speed)
+# qqline(data$speed)
+# 
+# hist(data$speed)
+# 
+# sub1 <- data %>%
+#   filter(speed <= 60)
+# 
+# sub2 <- data %>%
+#   filter(speed > 60)
+# 
+# qqnorm(sub1$speed)
+# qqline(sub1$speed)
+# 
+# qqnorm(sub2$speed)
+# qqline(sub2$speed)
+# 
+# hist(sub1$speed, breaks = 50)
+# hist(sub2$speed, breaks = 50)
+```
+
+### EDA
+
+```{r FILTERED RATIO AND PLOT}
+ ############ REDO THE RAW_POSTED_RATIO #############
+
+# ratio of raw speed to posted speed limit
+raw_posted_ratio <- data$speed / data$posted_speed
+
+
+raw_posted_ratio <- raw_posted_ratio[ raw_posted_ratio > 1 & raw_posted_ratio < 2.5]
+
+length(raw_posted_ratio)
+
+# Remove the speed ratios that became NA
+# due to an undocumented speed 
+# (could be many reasons like it not 
+# being a speeding violation, or officer error)
+raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
+
+# Dont need to input a dataframe: NULL
 ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_histogram(bins = 50) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
             color="blue", linetype="dashed", linewidth=1)
+
+summary(raw_posted_ratio)
+sd(raw_posted_ratio)
+```
+
+
+```{r SAMPLE}
+# Let's just use a sample of 50 - 200 for the project
+# because it doesnt make much sense otherwise
+x <- sample(raw_posted_ratio, 30)
+
+xbar <- mean(x)
+s <- sd(x)
+
+
+hist(x)
+```
+
+
+So would we trust the sample mean? Obviously there is too much uncertainty, especially with our size n sample.
+
+```{r spare code}
+# 611k observations in this range!
+# There's 365 less than 1
+# There's only 133 ratios over 2.5x
+# raw_posted_ratio <- 
+#   raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
+# 
+# ggplot(NULL, aes(x=raw_posted_ratio)) +
+#   geom_histogram(bins = 50) +
+#   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
+#             color="blue", linetype="dashed", linewidth=1)
 ```
 
 boot mean.
 
 Use lab 8, 9 for reference from stat3333
 
-```{r}
-n <- length(raw_posted_ratio) * .5
+```{r BOOTSTRAP MEAN}
+n <- length(x)
 
-N <- 10^4
+N <- 10^5
 
 boot_means <- numeric(N)
+boot_sds <- numeric(N)
 
 for (i in 1:N)
 {
-  boot_means[i] <- mean(sample(raw_posted_ratio, n, replace = T))
+  boot_sample <- sample(x, n, replace = T)
+  boot_means[i] <- mean(boot_sample)
+  boot_sds[i] <- sd(boot_sample)
 }
 
 hist(boot_means)
@@ -127,6 +220,8 @@ qqline(boot_means)
 
 mean(boot_means)
 sd(boot_means)
+
+mean(boot_sds)
 ```
 
 ### Prior Assumptions
@@ -137,13 +232,11 @@ $\theta$ is the the true mean ratio of speed to speed limit.
 
 We will consider three priors:
 
-1. $\theta$ is based on the sample statistics:
+1. A noninformative prior assumption on $\theta$
 
-$\mu$ = 1.336, $\tau = \dfrac{1}{\sigma_{raw_posted_ratio}}$
+2. $\theta$ based on the sample statistics
 
-2. $\theta$ is based on the bootstrap statistics
-
-3. 
+3. $\theta$ based on the bootstrap statistics
 
 
 ```{r prior distribution on sample statistics}
@@ -151,10 +244,13 @@ $\mu$ = 1.336, $\tau = \dfrac{1}{\sigma_{raw_posted_ratio}}$
 #######################################################################
 ############# PRIOR DISTRIBUTION ON SAMPLE STATISTICS #################
 #######################################################################
+rate <- 1000
+shape <- round(s * rate)
 
 Nrep <- 10^5
-mu_sim_prior = rnorm(Nrep, 1.336, .106)
-tau_sim_prior = rgamma(Nrep, 1, 10)
+# Sample mean `xbar` and sample sd `s` from SAMPLE block
+mu_sim_prior = rnorm(Nrep, xbar, s)
+tau_sim_prior = rgamma(Nrep, shape = shape, rate = rate)
 sigma_sim_prior = 1 / sqrt(tau_sim_prior)
 sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
 ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
@@ -167,10 +263,11 @@ ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
 #######################################################################
 ########## PRIOR DISTRIBUTION ON BOOTSTRAPPED STATISTICS ##############
 #######################################################################
+rate <- 1000
+shape <- round(mean(boot_sds) * rate)
 
-
-mu_sim_prior = rnorm(Nrep, mean(boot_means), sd(boot_means))
-tau_sim_prior = rgamma(Nrep, .004, 10)
+mu_sim_prior = rnorm(Nrep, mean(boot_means), mean(boot_sds))
+tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
 sigma_sim_prior = 1 / sqrt(tau_sim_prior)
 sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
 ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
@@ -182,17 +279,11 @@ ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
 
 1st run:
 
-- Assume normality of data (horribly wrong)
-  - Assume $\sigma$ of data is +/- 5% speed.
-- Assume mean ratio has $\mu$ = 1.336 and $\tau = \dfrac{1}{\sigma_{raw_posted_ratio}}$
-
-$2^{nd}$ run:
-- Use bootstrapped statistics; mu~N(1.3, .00007) or something (See boot_means and sd above)
-
-$3^{nd}$ run:
--try mu~N(mu, sigma) and hyperpriors
-
-Try noninformative priors
+- A run with my own prior
+- A run with noninformative (let data talk)
+- A run with sample statistics
+- A run with bootstrapped statistics
+- A run with hyperpriors
 
 ```{r JAGs on Sample Stats}
 
@@ -200,12 +291,12 @@ Try noninformative priors
 ################### ASSUMPTIONS BASED ON SAMPLE STATISTICS ###################
 ##############################################################################
 
-n <- length(raw_posted_ratio)
+n <- length(x)
 
 model_string <- "model{
 
   # Likelihood
-  for (i in 1:1000){
+  for (i in 1:n){
     x[i] ~ dnorm(mu, 1 / sigma ^ 2)
   }
   sigma <- .05
@@ -213,13 +304,13 @@ model_string <- "model{
 
   # Prior
   mu ~ dnorm(mu0, 1 / tau0 ^ 2)
-  mu0 <- 1.336  
-  tau0 <- 1 / .0247
+  mu0 <- 1.33  
+  tau0 <- 1 / .02
 
 }"
 
 # Compile the model
-dataList = list(x=raw_posted_ratio, n=n)
+dataList = list(x=x, n=n)
 model <- jags.model(textConnection(model_string),
                     data=dataList,
                     n.chains=5, quiet = T) 
@@ -228,7 +319,7 @@ update(model, 1000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
                                  variable.names=c("mu"),
-                                 n.iter=N,
+                                 n.iter=10000,
                                  progress.bar="none")
 # Summarize and check diagnostics
 summary(posterior_sample)
@@ -261,13 +352,15 @@ model_string <- "model{
   for (i in 1:1000){
     x[i] ~ dnorm(mu, 1 / sigma ^ 2)
   }
-  sigma <- .05
+  # sigma <- .05
   
 
   # Prior
   mu ~ dnorm(mu0, 1 / tau0 ^ 2)
   mu0 <- 1.2627  
-  tau0 <- 1 / .00045 ^ 2
+  # .13
+  tau0 ~ dgamma(1,100)
+  sigma <- 1 / sqrt(tau0)
 
 }"
 
@@ -277,10 +370,10 @@ model <- jags.model(textConnection(model_string),
                     data=dataList,
                     n.chains=5, quiet = T) 
 
-update(model, 1000, progress.bar="none")
+update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu"),
+                                 variable.names=c("mu", 'sigma'),
                                  n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
@@ -294,8 +387,17 @@ plot(posterior_sample)
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
+# saveType = "jpg")
+
+set.seed(984673)
+theta_sim = as.matrix(posterior_sample)
+x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], theta_sim[, "sigma"])
+quantile(x_sim, c(0.025, 0.975))
+hist(x_sim, freq = FALSE, xlab = "Body temperature (degrees F)",
+     main = "Posterior preditive distribution")
+lines(density(x_sim))
+abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
 
