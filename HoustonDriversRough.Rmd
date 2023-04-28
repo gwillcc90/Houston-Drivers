@@ -10,7 +10,6 @@ subtitle: A Bayesian Analysis of Moving Violations in Houston
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T)
-set.seed(42)
 ```
 
 ## Alternate Introduction 
@@ -169,6 +168,7 @@ sd(raw_posted_ratio)
 ```{r SAMPLE}
 # Let's just use a sample of 50 - 200 for the project
 # because it doesnt make much sense otherwise
+set.seed(42)
 x <- sample(raw_posted_ratio, 30)
 
 xbar <- mean(x)
@@ -199,6 +199,7 @@ boot mean.
 Use lab 8, 9 for reference from stat3333
 
 ```{r BOOTSTRAP MEAN}
+# set.seed(42)
 n <- length(x)
 
 N <- 10^5
@@ -213,13 +214,15 @@ for (i in 1:N)
   boot_sds[i] <- sd(boot_sample)
 }
 
-hist(boot_means)
+# hist(boot_means)
 
-qqnorm(boot_means)
-qqline(boot_means)
+
+######################### SKEWED ##############
+# qqnorm(boot_means)
+# qqline(boot_means)
 
 mean(boot_means)
-sd(boot_means)
+# sd(boot_means)
 
 mean(boot_sds)
 ```
@@ -240,7 +243,7 @@ We will consider three priors:
 
 
 ```{r prior distribution on sample statistics}
-
+set.seed(42)
 #######################################################################
 ############# PRIOR DISTRIBUTION ON SAMPLE STATISTICS #################
 #######################################################################
@@ -251,15 +254,15 @@ Nrep <- 10^5
 # Sample mean `xbar` and sample sd `s` from SAMPLE block
 mu_sim_prior = rnorm(Nrep, xbar, s)
 tau_sim_prior = rgamma(Nrep, shape = shape, rate = rate)
-sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
-ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
+# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
+# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
+ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1)
 ```
 
 ```{r prior distribution on bootstrapped statistics}
-
+set.seed(42)
 #######################################################################
 ########## PRIOR DISTRIBUTION ON BOOTSTRAPPED STATISTICS ##############
 #######################################################################
@@ -268,9 +271,9 @@ shape <- round(mean(boot_sds) * rate)
 
 mu_sim_prior = rnorm(Nrep, mean(boot_means), mean(boot_sds))
 tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
-sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
-ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
+# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
+# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
+ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1)
 ```
@@ -286,7 +289,7 @@ ggplot(sim_prior, aes(mu_sim_prior, tau_sim_prior)) +
 - A run with hyperpriors
 
 ```{r JAGs on Sample Stats}
-
+set.seed(42)
 ##############################################################################
 ################### ASSUMPTIONS BASED ON SAMPLE STATISTICS ###################
 ##############################################################################
@@ -299,13 +302,16 @@ model_string <- "model{
   for (i in 1:n){
     x[i] ~ dnorm(mu, 1 / sigma ^ 2)
   }
-  sigma <- .05
+  #sigma <- .05
   
 
   # Prior
   mu ~ dnorm(mu0, 1 / tau0 ^ 2)
-  mu0 <- 1.33  
-  tau0 <- 1 / .02
+  # mu <- 1.393571
+  mu0 <-  1.393571
+  #mu0 <- 1.33  
+  tau0 <- 1 / 0.04827723 # Actually the mean's SD
+  sigma <- 0.2696776
 
 }"
 
@@ -341,7 +347,7 @@ saveType = "jpg")
 ```{r JAGs on Bootstrapped stats}
 
 ##############################################################################
-################### ASSUMPTIONS BASED ON SAMPLE STATISTICS ###################
+############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
 ##############################################################################
 
 n <- length(raw_posted_ratio)
