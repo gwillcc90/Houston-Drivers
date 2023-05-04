@@ -5,51 +5,56 @@ date: "2023-04-15"
 output:
   pdf_document: default
   html_document: default
-subtitle: A Bayesian Analysis of Moving Violations in Houston
+subtitle: An Analysis of Moving Violations in Houston
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T)
+knitr::opts_chunk$set(echo = T, eval = F, echo = F)
 ```
 
-## Alternate Introduction 
+## Introduction 
 
-Southern Texas's "greater Houston area" is a 665 $mi^2$ section of land surrounded and surrounding many municipalities [Cite]. The population of the metropolitan and its suburbs generates much automobile traffic; getting to cities in and around Houston can take hours during the work-school "rush hours". Due to Houston's size and considerable traffic, people feel rushed, break the speed limit laws, and get pulled over. Conveniently, Houston police departments provide their traffic-stop data to the Stanford Policing Project that open-sources the data via their website [Cite].
+Southern Texas's "greater Houston area" is a 665 $mi^2$ [cite] section of land surrounded by and surrounding many municipalities [Cite]. The population of the metropolitan and its populous suburbs generate much automobile traffic; travelling to destinations in and around Houston can take hours during the work-school "rush hours". Due to Houston's size and considerable traffic, people feel rushed, break the speed limit laws, and get pulled over. Conveniently, Houston police departments provide their traffic-stop data to the Stanford Policing Project that open-sources the data via their website [Cite].
 
-MAYBE PUT INFO ABOUT DATASET HERE TO FILL FIRST PAGE.
+If you've been stopped for a traffic violation, you know the citation shows the date, time, location, violation type, speed, and posted speed, among other things. The dataset contains 21 column features, but we will only work with the following:
 
-## Introduction
+|Feature|Description|
+|-------|-----------|
+|speed  | Speed of vehicle|
+|posted_speed| Posted speed limit|
+|vehicle_make| Brand of vehicle|
+|date| date citation was issued|
 
+But just looking at those features individually is neither descriptive nor interesting. I create a new feature called `ratio`.
 
-Houston is an enormous metropolitan completely surrounded by suburban areas, denoted "the greater Houston area". The population and the automobile traffic it generates, getting from a suburban area on the south side to one on the north side can consume, more-or-less, an hour and a half of time. With this said, there are lots of cars which means lots of people rushing to get from one municipality or suburb to another, or to go in and out of Houston proper. The want to get from point A to point B in the 665 square mile city causes a subconscious anxiety and desire to rush, which causes police to give many speeding violations. Conveniently, police frequently record the speed of the offender and the posted speed limit when writing a citation, and this data is available via the Stanford Open Policing Project, which the Houston police department participates with in open-sourcing their data.
+|Feature|Description|
+|-------|-----------|
+|ratio  | Ratio of vehicle speed to posted limit|
+
+-----------------------------------------------------------------
+
 
 ### Problem
 
-Size and roads cause tons of traffic, accidents. Size is so big it takes forever to get places.
+The size of roads and accidents in the most heavily populated areas makes for a energy-draining daily commute that implore breaking the speed limit.
 
-Houston's expanse causes tiring, daily commutes that implore breaking speed limit laws. The posted speed limits in Houston are fair, but only because the roads are tiny [[in hugely populated, high-traffic areas, so there is little room for driving error around the city.]]
-
-Houston's Highway Transit System (HTS) infrastructure is flawed. 
+---------------------------------------------------------------------
 
 ### Purpose
 
-The purpose is to compare the results of a Frequentist analysis and a Bayesian analysis on people stopped by a police officer to hypothesize solutions to traffic problems. The metrics analyzed are: 
+Whilst difficult to even speculate infrastructure changes to soothe, it is possible that increasing the speed limits may alleviate traffic. Therefore, the purpose of this paper is to use frequentist and Bayesian analysis on the data given about speeding tickets to infer on the population parameters of:
 
-QUESTION 1:
+- the ratio of actual speed versus posted speed limit
+- the time between traffic stops
+- the number of stops per day
+- is there a difference among drivers of different car brands?
 
-- the ratio of actual speed versus posted speed limit, the time between traffic stops, and the number of stops per day.
-
-Actually, I got pulled over once, back in the day, and I recall the "Average speed" in a 60mph area was 75. Given this small amount of data, I'll assume that +25% speed is the $\mu$ with a deviation of something...
-
-QUESTION 2:
-
-- Is there a difference among people driving different national brands of cars?
-
-QUESTION 3:
-
+with the hopes of getting better insight into the traffic problem and hypothesizing solutions.
 
 
 ## Results and Discussion
+
+The data required some cleaning. To get a nice distribution of the speed `ratio`, cleaning out 1,433,649 `NA` values was necessary. Leaving 612,323 points to visualize the distribution. But this is quite a lot of data, so we will only look at the initial distribution and then use a random sample of the data.
 
 ```{r LIBRARIES, message = F, warning = F}
 library(dplyr, quietly = T)
@@ -60,12 +65,6 @@ source("DBDA2E-utilities.R")
 
 ```{r DATA}
 data <- read.csv('tx_houston_2023_01_26.csv')
-```
-
-We're intially interested in the distribution of the speed ratio. Let's check out the histogram.
-
-```{r COLNAMES SPARE}
-colnames(data)
 ```
 
 
@@ -89,7 +88,12 @@ ggplot(NULL, aes(x=raw_posted_ratio)) +
 
 ```{r INITIAL RATIO SUMMARY}
 summary(data$speed[!is.na(data$speed)])
+round(summary(raw_posted_ratio),2)
 ```
+Feature|Min.| 1st Qu.|  Median |   Mean |3rd Qu. |   Max.|
+|------|----|--------|---------|--------|--------|-------|
+|speed|1.00 |  45.00 |  56.00 |  58.64   |74.00  |753.00|
+|ratio|0.03 |   1.24  |  1.32 |   1.34  |  1.43 |  17.33|
 
 
 There's a huge problem with this distribution: some values are over double, triple, and even 15 times the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. Further, if someone is caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
@@ -109,31 +113,39 @@ We will consider only vehicles meeting two conditions:
 # must be speeding; speed > posted_speed
 data = data %>%
   filter(speed <= 155, speed > posted_speed)
-
-# hist(data$speed)
-# 
-# nrow(data)
-
-# qqnorm(data$speed)
-# qqline(data$speed)
-# 
-# hist(data$speed)
-# 
-# sub1 <- data %>%
-#   filter(speed <= 60)
-# 
-# sub2 <- data %>%
-#   filter(speed > 60)
-# 
-# qqnorm(sub1$speed)
-# qqline(sub1$speed)
-# 
-# qqnorm(sub2$speed)
-# qqline(sub2$speed)
-# 
-# hist(sub1$speed, breaks = 50)
-# hist(sub2$speed, breaks = 50)
 ```
+
+```{r FILTER BY MANUFACTURER}
+s <- data %>%
+  select('vehicle_make', 'speed', 'posted_speed')
+s$ratio<- s$speed / s$posted_speed
+s$vehicle_make <- as.factor(s$vehicle_make)
+
+majors <- c('FORD', 'HONDA', 'TOYOTA', 'CHEVY')
+
+# Gets indices of toyota
+toyo_idx <- which(regexpr('TOY', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices of honda
+hond_idx <- which(regexpr('HON', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices of Ford
+ford_idx <- which(regexpr('FO', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices for Chevy
+chev_idx <- which(regexpr('CHEV', s$vehicle_make, ignore.case = T) >= 1)
+# Need to change every instance found by indices to single category for each index
+s[toyo_idx,]$vehicle_make <- 'TOYOTA'
+s[hond_idx,]$vehicle_make <- 'HONDA'
+s[ford_idx,]$vehicle_make <- 'FORD'
+s[chev_idx,]$vehicle_make <- 'CHEVY'
+
+# Filter so we only get cars in the `majors` variable
+s2 <- s %>%
+  filter(vehicle_make %in% majors)
+
+# Boxplot of speed ratios by car manufacturer
+ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
+  geom_boxplot()
+```
+
 
 ### EDA
 
@@ -169,7 +181,7 @@ sd(raw_posted_ratio)
 # Let's just use a sample of 50 - 200 for the project
 # because it doesnt make much sense otherwise
 set.seed(42)
-x <- sample(raw_posted_ratio, 30)
+x <- sample(raw_posted_ratio, 60)
 
 xbar <- mean(x)
 s <- sd(x)
@@ -180,21 +192,6 @@ hist(x)
 
 
 So would we trust the sample mean? Obviously there is too much uncertainty, especially with our size n sample.
-
-```{r spare code}
-# 611k observations in this range!
-# There's 365 less than 1
-# There's only 133 ratios over 2.5x
-# raw_posted_ratio <- 
-#   raw_posted_ratio[(raw_posted_ratio > 1.0) & (raw_posted_ratio < 2.5)]
-# 
-# ggplot(NULL, aes(x=raw_posted_ratio)) +
-#   geom_histogram(bins = 50) +
-#   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
-#             color="blue", linetype="dashed", linewidth=1)
-```
-
-boot mean.
 
 Use lab 8, 9 for reference from stat3333
 
@@ -222,9 +219,11 @@ for (i in 1:N)
 # qqline(boot_means)
 
 mean(boot_means)
-# sd(boot_means)
+sd(boot_means)
 
 mean(boot_sds)
+
+quantile(boot_means, c(.025,.975))
 ```
 
 ### Prior Assumptions
@@ -240,6 +239,10 @@ We will consider three priors:
 2. $\theta$ based on the sample statistics
 
 3. $\theta$ based on the bootstrap statistics
+
+4. Gamma and conjugate prior
+
+25% SD is the difference between speeding and not speeding; we need to randomly generate sigma in all cases.
 
 
 ```{r prior distribution on sample statistics}
@@ -288,7 +291,7 @@ ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
 - A run with bootstrapped statistics
 - A run with hyperpriors
 
-```{r JAGs on Sample Stats}
+```{r JAGs on Sample Stats prior}
 set.seed(42)
 ##############################################################################
 ################### ASSUMPTIONS BASED ON SAMPLE STATISTICS ###################
@@ -307,11 +310,20 @@ model_string <- "model{
 
   # Prior
   mu ~ dnorm(mu0, 1 / tau0 ^ 2)
-  # mu <- 1.393571
-  mu0 <-  1.393571
-  #mu0 <- 1.33  
+  
+  # Sample mean with size 30
+  #mu0 <-  1.393571
+  
+  # Sample mean ith size 60
+  mu0 <- 1.340332
+  
   tau0 <- 1 / 0.04827723 # Actually the mean's SD
-  sigma <- 0.2696776
+  
+  # Sample sd with size 30
+  #sigma <- 0.2696776
+  
+  # Sample sd with size 60
+  sigma <- 0.2149536
 
 }"
 
@@ -338,20 +350,12 @@ plot(posterior_sample)
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
+# saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
 #######################################################
-
-# theta_sim = as.matrix(posterior_sample)
-# x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], theta_sim[, "sigma"])
-# quantile(x_sim, c(0.025, 0.975))
-# hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-#      main = "Posterior preditive distribution")
-# lines(density(x_sim))
-# abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], 0.2696776)#, theta_sim[, "sigma"])
@@ -364,29 +368,28 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 
 
-```{r JAGs on Bootstrapped stats}
-
+```{r JAGs on Bootstrapped stats prior}
+set.seed(42)
 ##############################################################################
 ############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
 ##############################################################################
 
-n <- length(raw_posted_ratio)
-
 model_string <- "model{
 
   # Likelihood
-  for (i in 1:1000){
-    x[i] ~ dnorm(mu, 1 / sigma ^ 2)
+  for (i in 1:n){
+    x[i] ~ dt(mu, 1 / sigma ^ 2, tdf0)
   }
-  # sigma <- .05
-  
 
   # Prior
-  mu ~ dnorm(mu0, 1 / tau0 ^ 2)
-  mu0 <- 1.2627  
-  # .13
-  tau0 ~ dgamma(1,100)
-  sigma <- 1 / sqrt(tau0)
+  #mu ~ dnorm(mu0, 1 / tau0 ^ 2)
+  mu ~ dnorm(mu0, 0.02745854)
+  mu0 <- 1.340342 # Mean of the bootstrap means
+  #tau0 ~ dgamma(1,100)
+  # sigma <- 1 / sqrt(tau0)
+  # tau0 <- .259205 # Mean of bootstrap SDs
+  sigma <- .2149536 # Mean of bootstrap SDs
+  tdf0 <- 59
 
 }"
 
@@ -399,7 +402,7 @@ model <- jags.model(textConnection(model_string),
 update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu", 'sigma'),
+                                 variable.names=c("mu", 'sigma', 'tdf0'),
                                  n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
@@ -415,6 +418,11 @@ plot(posterior_sample)
 
 # diagMCMC(posterior_sample,saveName = "diagMCMCeg",
 # saveType = "jpg")
+
+#######################################################
+########### POSTERIOR PREDICTIVE DISTRIBUTION #########
+#######################################################
+
 theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], theta_sim[, "sigma"])
 quantile(x_sim, c(0.025, 0.975))
@@ -424,4 +432,213 @@ lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
+df 1 + 1/.7
+0.8726694 1.7224805 
+
+df 59
+
+```{r JAGS on Noninformative Prior}
+set.seed(42)
+##############################################################################
+############## ASSUMPTIONS BASED ON NONINFORMATIVE PRIOR  ####################
+##############################################################################
+
+model_string <- "model{
+
+  # Likelihood
+  for (i in 1:n){
+    x[i] ~ dnorm(mu, 1 / sigma ^ 2)
+  }
+
+  # Prior
+  mu ~ dnorm(1.5, 50)
+  sigma <- .21
+
+}"
+
+# Compile the model
+dataList = list(x=raw_posted_ratio, n=n)
+model <- jags.model(textConnection(model_string),
+                    data=dataList,
+                    n.chains=5, quiet = T) 
+
+update(model, 2000, progress.bar="none")
+
+posterior_sample <- coda.samples(model, 
+                                 variable.names=c("mu"),# 'sigma'),
+                                 n.iter=N,
+                                 progress.bar="none")
+# Summarize and check diagnostics
+summary(posterior_sample)
+
+
+## --------------------------------
+plot(posterior_sample)
+
+#######################################################
+#################### DIAGNOSTICS ######################
+#######################################################
+
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
+# saveType = "jpg")
+
+#######################################################
+########### POSTERIOR PREDICTIVE DISTRIBUTION #########
+#######################################################
+
+theta_sim = as.matrix(posterior_sample)
+x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"]) #, theta_sim[, "sigma"])
+quantile(x_sim, c(0.025, 0.975))
+hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
+     main = "Posterior preditive distribution")
+lines(density(x_sim))
+abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+```
+
+
+JAGS ON GAMMA PRIOR
+
+```{r}
+set.seed(42)
+##############################################################################
+############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
+##############################################################################
+
+model_string <- "model{
+
+  # Likelihood
+  for (i in 1:n){
+    x[i] ~ dgamma(shape,rate)
+    # x[i] ~ dgamma(96,75)
+  }
+
+  # Prior
+  
+  #mu ~ dgamma(96,75)
+  mu ~ dgamma(shape, rate)
+  shape ~ dnorm(96, 10)
+  rate ~ dnorm(75, 10)
+  
+
+}"
+
+# Compile the model
+dataList = list(x=raw_posted_ratio, n=n)
+model <- jags.model(textConnection(model_string),
+                    data=dataList,
+                    n.chains=5, quiet = T) 
+
+update(model, 2000, progress.bar="none")
+
+posterior_sample <- coda.samples(model, 
+                                 variable.names=c("mu", 'shape', 'rate'),
+                                 n.iter=N,
+                                 progress.bar="none")
+# Summarize and check diagnostics
+summary(posterior_sample)
+
+
+## --------------------------------
+plot(posterior_sample)
+
+#######################################################
+#################### DIAGNOSTICS ######################
+#######################################################
+
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
+# saveType = "jpg")
+
+#######################################################
+########### POSTERIOR PREDICTIVE DISTRIBUTION #########
+#######################################################
+
+theta_sim = as.matrix(posterior_sample)
+x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
+quantile(x_sim, c(0.025, 0.975))
+hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
+     main = "Posterior preditive distribution")
+lines(density(x_sim))
+abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+```
+
+
+
+dgamma(32, 25)
+-0.7294995  3.2886307
+
+dgamma(96, 75)
+2.5%      97.5% 
+-0.6984269  3.2544228
+
+
+
+```{r}
+set.seed(42)
+
+p <- prod(x)
+q <- sum(x)
+##############################################################################
+############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
+##############################################################################
+
+model_string <- "model{
+
+  # Likelihood
+  for (i in 1:n){
+    x[i] ~ dgamma(shape,rate)
+    # x[i] ~ dgamma(96,75)
+  }
+
+  # Prior
+  
+  #mu ~ dgamma(96,75)
+  #mu ~ dgamma(shape, rate)
+  
+  shape ~ dnorm(96, 1 / 10^2)
+  rate ~ dnorm(75, 1 / 10^2)
+  
+  # Exp prior
+  
+  
+  
+}"
+
+# Compile the model
+dataList = list(x=raw_posted_ratio, n=n)
+model <- jags.model(textConnection(model_string),
+                    data=dataList,
+                    n.chains=5, quiet = T) 
+
+update(model, 2000, progress.bar="none")
+
+posterior_sample <- coda.samples(model, 
+                                 variable.names=c('shape', 'rate'),
+                                 n.iter=N,
+                                 progress.bar="none")
+# Summarize and check diagnostics
+summary(posterior_sample)
+
+
+## --------------------------------
+plot(posterior_sample)
+
+#######################################################
+#################### DIAGNOSTICS ######################
+#######################################################
+
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
+# saveType = "jpg")
+
+#######################################################
+########### POSTERIOR PREDICTIVE DISTRIBUTION #########
+#######################################################
+
+theta_sim = as.matrix(posterior_sample)
+x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
+quantile(x_sim, c(0.025, 0.975))
+hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
+     main = "Posterior preditive distribution")
+lines(density(x_sim))
+abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+```
 
