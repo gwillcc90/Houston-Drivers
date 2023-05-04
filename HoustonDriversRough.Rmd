@@ -9,7 +9,7 @@ subtitle: An Analysis of Moving Violations in Houston
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T, eval = F, echo = F)
+knitr::opts_chunk$set(echo = F)
 ```
 
 ## Introduction 
@@ -60,6 +60,7 @@ The data required some cleaning. To get a nice distribution of the speed `ratio`
 library(dplyr, quietly = T)
 library(ggplot2)
 library(rjags)
+library(ggpubr)
 source("DBDA2E-utilities.R")
 ```
 
@@ -86,27 +87,28 @@ ggplot(NULL, aes(x=raw_posted_ratio)) +
   labs(title = 'Ratio of Raw Speed vs. Posted Speed Limit', x = 'Ratio')
 ```
 
-```{r INITIAL RATIO SUMMARY}
+```{r INITIAL RATIO SUMMARY, eval = F}
 summary(data$speed[!is.na(data$speed)])
 round(summary(raw_posted_ratio),2)
 ```
+
+--------------------------------------------------------------------
+
+There's a huge problem with this distribution: some values are over double, triple, and even 15 times the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. Further, if someone is caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic. Also, the maximum speed is 753 miles per hour, "that's faster than an airplane" - Dr. Cahoy, circa 2023.
+
 Feature|Min.| 1st Qu.|  Median |   Mean |3rd Qu. |   Max.|
 |------|----|--------|---------|--------|--------|-------|
 |speed|1.00 |  45.00 |  56.00 |  58.64   |74.00  |753.00|
 |ratio|0.03 |   1.24  |  1.32 |   1.34  |  1.43 |  17.33|
 
-
-There's a huge problem with this distribution: some values are over double, triple, and even 15 times the speed limit. Let's think of this logically. If someone is travelling even five times the speed limit of 20MPH, they're going 100MPH. That's fine, but a road with a 20MPH limit is likely small, so going 100mph almost seems unreasonable. Further, if someone is caught travelling over 10 times the speed limit at 20 or 30MPH, they'd be going 200 and 300MPH, or someone going 60MPH would be travelling at 600MPH. This isn't realistic.
-
 We will consider only vehicles meeting two conditions:
+
 - found to be speeding: their logged speed exceeds the posted speed limit
   - `speed` > `posted_speed`
-- Speed is less than 155MPH: the governed speed
+  - This forces `ratio` > 1 and confirms the vehicle was speeding
+- `speed` is less than 155MPH: the governed speed [1]
   - `speed` $\leq$ 155
-
-`speed` > `posted_speed`
-
------The dataset also considers people travelling under the speed limit, which means there were probably pulled over for something other than speeding. These observations are removed as well.------
+  - It's unreasonable to think a car is travelling on a public road at over this speed.
 
 ```{r FILTERED DATASET}
 # 155 is the governed speed
@@ -141,6 +143,8 @@ s[chev_idx,]$vehicle_make <- 'CHEVY'
 s2 <- s %>%
   filter(vehicle_make %in% majors)
 
+########## NEED BELOW PLOT FOR LATER ##################
+
 # Boxplot of speed ratios by car manufacturer
 ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
   geom_boxplot()
@@ -172,8 +176,9 @@ ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
             color="blue", linetype="dashed", linewidth=1)
 
-summary(raw_posted_ratio)
-sd(raw_posted_ratio)
+# Want to place the dataset's statistics at the end.
+# summary(raw_posted_ratio)
+# sd(raw_posted_ratio)
 ```
 
 
@@ -187,13 +192,9 @@ xbar <- mean(x)
 s <- sd(x)
 
 
-hist(x)
+hist(x, main = 'Distribution of a Random Sample of Size 60', 
+     xlab = 'Ratio')
 ```
-
-
-So would we trust the sample mean? Obviously there is too much uncertainty, especially with our size n sample.
-
-Use lab 8, 9 for reference from stat3333
 
 ```{r BOOTSTRAP MEAN}
 # set.seed(42)
@@ -218,12 +219,12 @@ for (i in 1:N)
 # qqnorm(boot_means)
 # qqline(boot_means)
 
-mean(boot_means)
-sd(boot_means)
-
-mean(boot_sds)
-
-quantile(boot_means, c(.025,.975))
+# mean(boot_means)
+# sd(boot_means)
+# 
+# mean(boot_sds)
+# 
+# quantile(boot_means, c(.025,.975))
 ```
 
 ### Prior Assumptions
@@ -234,18 +235,17 @@ $\theta$ is the the true mean ratio of speed to speed limit.
 
 We will consider three priors:
 
-1. A noninformative prior assumption on $\theta$
+1. A non-informative prior assumption on $\theta$
 
 2. $\theta$ based on the sample statistics
 
 3. $\theta$ based on the bootstrap statistics
+  - A bootstrap distribution was simulated in the code.
 
 4. Gamma and conjugate prior
 
-25% SD is the difference between speeding and not speeding; we need to randomly generate sigma in all cases.
 
-
-```{r prior distribution on sample statistics}
+```{r prior distribution on sample/bootstrap statistics}
 set.seed(42)
 #######################################################################
 ############# PRIOR DISTRIBUTION ON SAMPLE STATISTICS #################
@@ -257,14 +257,12 @@ Nrep <- 10^5
 # Sample mean `xbar` and sample sd `s` from SAMPLE block
 mu_sim_prior = rnorm(Nrep, xbar, s)
 tau_sim_prior = rgamma(Nrep, shape = shape, rate = rate)
-# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
-ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
-  geom_point(color = "skyblue", alpha = 0.4) +
-  geom_density_2d(color = "orange", linewidth = 1)
-```
 
-```{r prior distribution on bootstrapped statistics}
+p1 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
+  geom_point(color = "skyblue", alpha = 0.4) +
+  geom_density_2d(color = "orange", linewidth = 1) +
+  labs(xlab = 'Ratio', ylab = '', title = 'Sample Mean Prior')
+
 set.seed(42)
 #######################################################################
 ########## PRIOR DISTRIBUTION ON BOOTSTRAPPED STATISTICS ##############
@@ -276,20 +274,15 @@ mu_sim_prior = rnorm(Nrep, mean(boot_means), mean(boot_sds))
 tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
 # sigma_sim_prior = 1 / sqrt(tau_sim_prior)
 # sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
-ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
+p2 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
-  geom_density_2d(color = "orange", linewidth = 1)
+  geom_density_2d(color = "orange", linewidth = 1) +
+  labs(xlab = 'Ratio', ylab = '', title = 'Bootstrap Mean Prior')
+
+ggarrange(p1, p2)
 ```
 
 
-
-1st run:
-
-- A run with my own prior
-- A run with noninformative (let data talk)
-- A run with sample statistics
-- A run with bootstrapped statistics
-- A run with hyperpriors
 
 ```{r JAGs on Sample Stats prior}
 set.seed(42)
@@ -336,7 +329,7 @@ model <- jags.model(textConnection(model_string),
 update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu", 'sigma'),
+                                 variable.names=c("mu"),# 'sigma'),
                                  n.iter=100000,
                                  progress.bar="none")
 # Summarize and check diagnostics
@@ -430,12 +423,10 @@ hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+
+
+
 ```
-
-df 1 + 1/.7
-0.8726694 1.7224805 
-
-df 59
 
 ```{r JAGS on Noninformative Prior}
 set.seed(42)
@@ -578,7 +569,7 @@ set.seed(42)
 p <- prod(x)
 q <- sum(x)
 ##############################################################################
-############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
+############## ASSUMPTIONS BASED ON A GAMMA PRIOR  ###########################
 ##############################################################################
 
 model_string <- "model{
@@ -590,12 +581,8 @@ model_string <- "model{
   }
 
   # Prior
-  
-  #mu ~ dgamma(96,75)
-  #mu ~ dgamma(shape, rate)
-  
-  shape ~ dnorm(96, 1 / 10^2)
-  rate ~ dnorm(75, 1 / 10^2)
+  shape ~ dnorm(96, 1 / 3^2)
+  rate ~ dnorm(75, 1 / 3^2)
   
   # Exp prior
   
@@ -609,11 +596,11 @@ model <- jags.model(textConnection(model_string),
                     data=dataList,
                     n.chains=5, quiet = T) 
 
-update(model, 2000, progress.bar="none")
+update(model, 1000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
                                  variable.names=c('shape', 'rate'),
-                                 n.iter=N,
+                                 n.iter=10000,
                                  progress.bar="none")
 # Summarize and check diagnostics
 summary(posterior_sample)
