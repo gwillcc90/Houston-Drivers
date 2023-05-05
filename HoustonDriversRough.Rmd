@@ -289,6 +289,7 @@ model_string <- "model{
 
 }"
 
+
 # Compile the model
 dataList = list(x=x, n=n)
 model <- jags.model(textConnection(model_string),
@@ -593,12 +594,12 @@ s[ford_idx,]$vehicle_make <- 'FORD'
 s[chev_idx,]$vehicle_make <- 'CHEVY'
 
 # Filter so we only get cars in the `majors` variable
-s2 <- s %>%
-  filter(vehicle_make %in% majors)
+# s2 <- s %>%
+#   filter(vehicle_make %in% majors)
 
 # Drop levels or dataframe keeps the levels from superset
 # So dumb this isn't automatic
-s2$vehicle_make <- droplevels(s2$vehicle_make)
+# s2$vehicle_make <- droplevels(s2$vehicle_make)
 
 ########## NEED BELOW PLOT FOR LATER ##################
 
@@ -618,6 +619,7 @@ s[honda_x,]
 
 
 d <- rbind(s[honda_x,], s[toyota_x,], s[ford_x,], s[chevy_x,])
+d$vehicle_make <- droplevels(d$vehicle_make)
 
 ggplot(d, aes(x = vehicle_make, y = ratio)) +
   geom_boxplot() +
@@ -628,30 +630,34 @@ ggplot(d, aes(x = vehicle_make, y = ratio)) +
 
 
 ```{r JAGS ANOVA on manufacturers}
-y = s2$ratio
-x = s2$vehicle_make
+y = d$ratio
+x = d$vehicle_make
 
-n_groups = nlevels(s2$vehicle_make)
+n_groups = nlevels(d$vehicle_make)
 
 n = length(y)
+  
+  
+model_string <- "model{
 
-model_string = "model
-{
-  # Sampling distribution/likelihood
-  for(i in 1:n) {
-  y[i] ~ dnorm(mu[x[i]], 1/sigma_y^2)
+  # Likelihood
+  for (i in 1:n){
+    y[i] ~ dnorm(mu[x[i]], 1/sigma_y^2)
   }
-  # Hierarchical prior for the means
-  # Prior for parameters
+  
+  #heirar prior for means
+  #prior for params
   for(i in 1:n_groups) {
   mu[i] ~ dnorm(mu0, 1/sigma_mu^2)
   }
-  sigma_y ~ dexp(0.048)
-  # Hyperparameters
-  mu0 ~ dnorm(50, 1/52^2)
+  sigma_y ~dexp(0.048)
+  #hyperparams
+  mu0~ dnorm(50, 1/52^2)
   sigma_mu ~ dexp(1)
-  
 }"
+
+
+
   
   
 dataList = list (y = y, n = n, n_groups =n_groups, x = x)
@@ -659,10 +665,11 @@ model <- jags.model(file = textConnection(model_string), data = dataList)
 
 update(model, n.iter = 1000)
 posterior_sample <- coda.samples(model,
-variable.names = c("mu", "mu0", "sigma_y", "sigma_mu"),
-n.iter = 1000,
-n.chains = 5)
-summary(posterior_sample)$statistics[1:22, 1:2]
+                                 variable.names = c("mu", "mu0", "sigma_y", 
+                                                    "sigma_mu"),
+                                 n.iter = 1000,
+                                 n.chains = 5)
 
+summary(posterior_sample)
 ```
 
