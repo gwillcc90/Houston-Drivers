@@ -115,6 +115,11 @@ We will consider only vehicles meeting two conditions:
 # must be speeding; speed > posted_speed
 data = data %>%
   filter(speed <= 155, speed > posted_speed)
+
+data$ratio <- data$speed / data$posted_speed
+
+data = data %>%
+  filter(!is.na(ratio))
 ```
 
 ### EDA
@@ -123,7 +128,7 @@ data = data %>%
  ############ REDO THE RAW_POSTED_RATIO #############
 
 # ratio of raw speed to posted speed limit
-raw_posted_ratio <- data$speed / data$posted_speed
+raw_posted_ratio <- data$ratio
 
 
 raw_posted_ratio <- raw_posted_ratio[ raw_posted_ratio > 1 & raw_posted_ratio < 2.5]
@@ -368,7 +373,7 @@ summary(posterior_sample)
 
 
 ## --------------------------------
-plot(posterior_sample)
+# plot(posterior_sample)
 
 #######################################################
 #################### DIAGNOSTICS ######################
@@ -486,7 +491,7 @@ summary(posterior_sample)
 
 
 ## --------------------------------
-plot(posterior_sample)
+# plot(posterior_sample)
 
 #######################################################
 #################### DIAGNOSTICS ######################
@@ -543,7 +548,7 @@ summary(posterior_sample)
 
 
 ## --------------------------------
-plot(posterior_sample)
+# plot(posterior_sample)
 
 #######################################################
 #################### DIAGNOSTICS ######################
@@ -565,10 +570,10 @@ lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
-```{r FILTER BY MANUFACTURER}
+```{r FILTER BY MANUFACTURER, fig.height=3}
 s <- data %>%
-  select('vehicle_make', 'speed', 'posted_speed')
-s$ratio<- s$speed / s$posted_speed
+  select('vehicle_make', 'speed', 'posted_speed', 'ratio')
+# s$ratio<- s$speed / s$posted_speed
 s$vehicle_make <- as.factor(s$vehicle_make)
 
 majors <- c('FORD', 'HONDA', 'TOYOTA', 'CHEVY')
@@ -576,7 +581,7 @@ majors <- c('FORD', 'HONDA', 'TOYOTA', 'CHEVY')
 # Gets indices of toyota
 toyo_idx <- which(regexpr('TOY', s$vehicle_make, ignore.case = T) >= 1)
 # Get indices of honda
-hond_idx <- which(regexpr('HON', s$vehicle_make, ignore.case = T) >= 1)
+hond_idx <- which(regexpr('HOND', s$vehicle_make, ignore.case = T) >= 1)
 # Get indices of Ford
 ford_idx <- which(regexpr('FO', s$vehicle_make, ignore.case = T) >= 1)
 # Get indices for Chevy
@@ -591,10 +596,73 @@ s[chev_idx,]$vehicle_make <- 'CHEVY'
 s2 <- s %>%
   filter(vehicle_make %in% majors)
 
+# Drop levels or dataframe keeps the levels from superset
+# So dumb this isn't automatic
+s2$vehicle_make <- droplevels(s2$vehicle_make)
+
 ########## NEED BELOW PLOT FOR LATER ##################
 
 # Boxplot of speed ratios by car manufacturer
-ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
-  geom_boxplot()
+# ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
+#   geom_boxplot() +
+#   labs(title = 'Speed Distribution by Vehicle Make', xlab = 'Make', ylab = 'Ratio')
+
+# Sample the indices for the respective cars to create a subset dataframe
+# Wont use replacement as we still want to assume this is a real sample
+toyota_x <- sample(toyo_idx, 20)
+honda_x <- sample(hond_idx, 20)
+ford_x <- sample(ford_idx, 20)
+chevy_x <- sample(chev_idx, 20)
+
+s[honda_x,]
+
+
+d <- rbind(s[honda_x,], s[toyota_x,], s[ford_x,], s[chevy_x,])
+
+ggplot(d, aes(x = vehicle_make, y = ratio)) +
+  geom_boxplot() +
+  labs(title = 'Speed Distribution by Vehicle Make', 
+       x = 'Make', y = 'Ratio')
+
+```
+
+
+```{r JAGS ANOVA on manufacturers}
+y = s2$ratio
+x = s2$vehicle_make
+
+n_groups = nlevels(s2$vehicle_make)
+
+n = length(y)
+
+model_string = "model
+{
+  # Sampling distribution/likelihood
+  for(i in 1:n) {
+  y[i] ~ dnorm(mu[x[i]], 1/sigma_y^2)
+  }
+  # Hierarchical prior for the means
+  # Prior for parameters
+  for(i in 1:n_groups) {
+  mu[i] ~ dnorm(mu0, 1/sigma_mu^2)
+  }
+  sigma_y ~ dexp(0.048)
+  # Hyperparameters
+  mu0 ~ dnorm(50, 1/52^2)
+  sigma_mu ~ dexp(1)
+  
+}"
+  
+  
+dataList = list (y = y, n = n, n_groups =n_groups, x = x)
+model <- jags.model(file = textConnection(model_string), data = dataList)
+
+update(model, n.iter = 1000)
+posterior_sample <- coda.samples(model,
+variable.names = c("mu", "mu0", "sigma_y", "sigma_mu"),
+n.iter = 1000,
+n.chains = 5)
+summary(posterior_sample)$statistics[1:22, 1:2]
+
 ```
 
