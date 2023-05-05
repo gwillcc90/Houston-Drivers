@@ -42,7 +42,7 @@ The size of roads and accidents in the most heavily populated areas makes for a 
 
 ### Purpose
 
-Whilst difficult to even speculate infrastructure changes to soothe, it is possible that increasing the speed limits may alleviate traffic. Therefore, the purpose of this paper is to use frequentist and Bayesian analysis on the data given about speeding tickets to infer on the population parameters of:
+Whilst nearly impossible to speculate any city and highway infrastructure changes, it is possible that increasing the speed limits may alleviate traffic. Therefore, the purpose of this paper is to use frequentist and Bayesian analysis on the data given about speeding tickets to infer on the population parameters of:
 
 - the ratio of actual speed versus posted speed limit
 - the time between traffic stops
@@ -69,7 +69,7 @@ data <- read.csv('tx_houston_2023_01_26.csv')
 ```
 
 
-```{r INITIAL RATIO HIST}
+```{r INITIAL RATIO HIST, fig.height=3}
 # ratio of raw speed to posted speed limit
 raw_posted_ratio <- data$speed / data$posted_speed
 
@@ -117,43 +117,9 @@ data = data %>%
   filter(speed <= 155, speed > posted_speed)
 ```
 
-```{r FILTER BY MANUFACTURER}
-s <- data %>%
-  select('vehicle_make', 'speed', 'posted_speed')
-s$ratio<- s$speed / s$posted_speed
-s$vehicle_make <- as.factor(s$vehicle_make)
-
-majors <- c('FORD', 'HONDA', 'TOYOTA', 'CHEVY')
-
-# Gets indices of toyota
-toyo_idx <- which(regexpr('TOY', s$vehicle_make, ignore.case = T) >= 1)
-# Get indices of honda
-hond_idx <- which(regexpr('HON', s$vehicle_make, ignore.case = T) >= 1)
-# Get indices of Ford
-ford_idx <- which(regexpr('FO', s$vehicle_make, ignore.case = T) >= 1)
-# Get indices for Chevy
-chev_idx <- which(regexpr('CHEV', s$vehicle_make, ignore.case = T) >= 1)
-# Need to change every instance found by indices to single category for each index
-s[toyo_idx,]$vehicle_make <- 'TOYOTA'
-s[hond_idx,]$vehicle_make <- 'HONDA'
-s[ford_idx,]$vehicle_make <- 'FORD'
-s[chev_idx,]$vehicle_make <- 'CHEVY'
-
-# Filter so we only get cars in the `majors` variable
-s2 <- s %>%
-  filter(vehicle_make %in% majors)
-
-########## NEED BELOW PLOT FOR LATER ##################
-
-# Boxplot of speed ratios by car manufacturer
-ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
-  geom_boxplot()
-```
-
-
 ### EDA
 
-```{r FILTERED RATIO AND PLOT}
+```{r FILTERED RATIO AND PLOT, fig.height=3}
  ############ REDO THE RAW_POSTED_RATIO #############
 
 # ratio of raw speed to posted speed limit
@@ -174,7 +140,8 @@ raw_posted_ratio <- raw_posted_ratio[!is.na(raw_posted_ratio)]
 ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_histogram(bins = 50) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
-            color="blue", linetype="dashed", linewidth=1)
+            color="blue", linetype="dashed", linewidth=1) +
+  labs(title = 'Speed-Ratio Distribution', subtitle = 'Under above constraints')
 
 # Want to place the dataset's statistics at the end.
 # summary(raw_posted_ratio)
@@ -182,7 +149,7 @@ ggplot(NULL, aes(x=raw_posted_ratio)) +
 ```
 
 
-```{r SAMPLE}
+```{r SAMPLE, fig.height=3}
 # Let's just use a sample of 50 - 200 for the project
 # because it doesnt make much sense otherwise
 set.seed(42)
@@ -196,7 +163,7 @@ hist(x, main = 'Distribution of a Random Sample of Size 60',
      xlab = 'Ratio')
 ```
 
-```{r BOOTSTRAP MEAN}
+```{r BOOTSTRAPPED STATISTICS}
 # set.seed(42)
 n <- length(x)
 
@@ -236,12 +203,9 @@ $\theta$ is the the true mean ratio of speed to speed limit.
 We will consider three priors:
 
 1. A non-informative prior assumption on $\theta$
-
 2. $\theta$ based on the sample statistics
-
 3. $\theta$ based on the bootstrap statistics
-  - A bootstrap distribution was simulated in the code.
-
+  - A bootstrap distribution was simulated in the code using the sample.
 4. Gamma and conjugate prior
 
 
@@ -261,7 +225,7 @@ tau_sim_prior = rgamma(Nrep, shape = shape, rate = rate)
 p1 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1) +
-  labs(xlab = 'Ratio', ylab = '', title = 'Sample Mean Prior')
+  labs(xlab = 'Ratio', ylab = '', title = 'Sample Mean Prior: Normal')
 
 set.seed(42)
 #######################################################################
@@ -284,7 +248,7 @@ ggarrange(p1, p2)
 
 
 
-```{r JAGs on Sample Stats prior}
+```{r JAGs on Sample Stats prior, fig.height=3}
 set.seed(42)
 ##############################################################################
 ################### ASSUMPTIONS BASED ON SAMPLE STATISTICS ###################
@@ -337,7 +301,7 @@ summary(posterior_sample)
 
 
 ## --------------------------------
-plot(posterior_sample)
+# plot(posterior_sample)
 
 #######################################################
 #################### DIAGNOSTICS ######################
@@ -351,17 +315,18 @@ plot(posterior_sample)
 #######################################################
 
 theta_sim = as.matrix(posterior_sample)
-x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], 0.2696776)#, theta_sim[, "sigma"])
-quantile(x_sim, c(0.025, 0.975))
+x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], 0.2696776)
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+
+  
+
 ```
 
-
-
-```{r JAGs on Bootstrapped stats prior}
+```{r JAGs on Bootstrapped stats prior, fig.height=3}
 set.seed(42)
 ##############################################################################
 ############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
@@ -428,7 +393,7 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 ```
 
-```{r JAGS on Noninformative Prior}
+```{r JAGS on Noninformative Prior, fig.height=3}
 set.seed(42)
 ##############################################################################
 ############## ASSUMPTIONS BASED ON NONINFORMATIVE PRIOR  ####################
@@ -441,9 +406,9 @@ model_string <- "model{
     x[i] ~ dnorm(mu, 1 / sigma ^ 2)
   }
 
+  sigma <- .21
   # Prior
   mu ~ dnorm(1.5, 50)
-  sigma <- .21
 
 }"
 
@@ -464,7 +429,7 @@ summary(posterior_sample)
 
 
 ## --------------------------------
-plot(posterior_sample)
+# plot(posterior_sample)
 
 #######################################################
 #################### DIAGNOSTICS ######################
@@ -479,20 +444,17 @@ plot(posterior_sample)
 
 theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"]) #, theta_sim[, "sigma"])
-quantile(x_sim, c(0.025, 0.975))
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
-
-JAGS ON GAMMA PRIOR
-
-```{r}
+```{r JAGS on gamma prior, fig.height=3}
 set.seed(42)
 ##############################################################################
-############## ASSUMPTIONS BASED ON BOOTSTRAPPED STATISTICS ##################
+############## ASSUMPTIONS BASED ON GAMMA PRIOR  #############################
 ##############################################################################
 
 model_string <- "model{
@@ -500,17 +462,11 @@ model_string <- "model{
   # Likelihood
   for (i in 1:n){
     x[i] ~ dgamma(shape,rate)
-    # x[i] ~ dgamma(96,75)
   }
 
   # Prior
-  
-  #mu ~ dgamma(96,75)
-  mu ~ dgamma(shape, rate)
-  shape ~ dnorm(96, 10)
-  rate ~ dnorm(75, 10)
-  
-
+  shape ~ dnorm(96, 1 / 3^2)
+  rate ~ dnorm(75, 1 / 3^2)
 }"
 
 # Compile the model
@@ -545,49 +501,29 @@ plot(posterior_sample)
 
 theta_sim = as.matrix(posterior_sample)
 x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
-quantile(x_sim, c(0.025, 0.975))
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
 
-
-
-dgamma(32, 25)
--0.7294995  3.2886307
-
-dgamma(96, 75)
-2.5%      97.5% 
--0.6984269  3.2544228
-
-
-
-```{r}
+```{r JAGS on exponential prior, fig.height=3}
 set.seed(42)
-
-p <- prod(x)
-q <- sum(x)
 ##############################################################################
-############## ASSUMPTIONS BASED ON A GAMMA PRIOR  ###########################
+############## ASSUMPTIONS BASED ON EXPONENTIAL PRIOR  #######################
 ##############################################################################
 
 model_string <- "model{
 
   # Likelihood
   for (i in 1:n){
-    x[i] ~ dgamma(shape,rate)
-    # x[i] ~ dgamma(96,75)
+    # x[i] ~ dgamma(shape,rate)
+    x[i] ~ dexp(lambda)
   }
 
   # Prior
-  shape ~ dnorm(96, 1 / 3^2)
-  rate ~ dnorm(75, 1 / 3^2)
-  
-  # Exp prior
-  
-  
-  
+  lambda ~ dexp(.00001)
 }"
 
 # Compile the model
@@ -596,11 +532,11 @@ model <- jags.model(textConnection(model_string),
                     data=dataList,
                     n.chains=5, quiet = T) 
 
-update(model, 1000, progress.bar="none")
+update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c('shape', 'rate'),
-                                 n.iter=10000,
+                                 variable.names=c("lambda"),
+                                 n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
 summary(posterior_sample)
@@ -621,11 +557,44 @@ plot(posterior_sample)
 #######################################################
 
 theta_sim = as.matrix(posterior_sample)
-x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
-quantile(x_sim, c(0.025, 0.975))
+x_sim = rgamma(nrow(theta_sim), theta_sim[,'lambda'])
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
      main = "Posterior preditive distribution")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
+```
+
+```{r FILTER BY MANUFACTURER}
+s <- data %>%
+  select('vehicle_make', 'speed', 'posted_speed')
+s$ratio<- s$speed / s$posted_speed
+s$vehicle_make <- as.factor(s$vehicle_make)
+
+majors <- c('FORD', 'HONDA', 'TOYOTA', 'CHEVY')
+
+# Gets indices of toyota
+toyo_idx <- which(regexpr('TOY', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices of honda
+hond_idx <- which(regexpr('HON', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices of Ford
+ford_idx <- which(regexpr('FO', s$vehicle_make, ignore.case = T) >= 1)
+# Get indices for Chevy
+chev_idx <- which(regexpr('CHEV', s$vehicle_make, ignore.case = T) >= 1)
+# Need to change every instance found by indices to single category for each index
+s[toyo_idx,]$vehicle_make <- 'TOYOTA'
+s[hond_idx,]$vehicle_make <- 'HONDA'
+s[ford_idx,]$vehicle_make <- 'FORD'
+s[chev_idx,]$vehicle_make <- 'CHEVY'
+
+# Filter so we only get cars in the `majors` variable
+s2 <- s %>%
+  filter(vehicle_make %in% majors)
+
+########## NEED BELOW PLOT FOR LATER ##################
+
+# Boxplot of speed ratios by car manufacturer
+ggplot(s2[s2$ratio <= 2.5,], aes(x = vehicle_make, y = ratio)) +
+  geom_boxplot()
 ```
 
