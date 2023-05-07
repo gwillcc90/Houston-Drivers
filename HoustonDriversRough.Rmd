@@ -9,7 +9,7 @@ subtitle: An Analysis of Moving Violations in Houston
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, eval = F)
+knitr::opts_chunk$set(echo = F)
 ```
 
 ## Introduction 
@@ -146,7 +146,7 @@ ggplot(NULL, aes(x=raw_posted_ratio)) +
   geom_histogram(bins = 50) +
   geom_vline(aes(xintercept=mean(raw_posted_ratio)),
             color="blue", linetype="dashed", linewidth=1) +
-  labs(title = 'Speed-Ratio Distribution', subtitle = 'Under above constraints')
+  labs(title = 'Speed-Ratio Distribution', subtitle = 'Under listed constraints')
 
 # Want to place the dataset's statistics at the end.
 # summary(raw_posted_ratio)
@@ -207,12 +207,13 @@ $\theta$ is the the true mean ratio of speed to speed limit.
 
 We will consider three priors:
 
-1. A non-informative prior assumption on $\theta$
-2. $\theta$ based on the sample statistics
-3. $\theta$ based on the bootstrap statistics
+1. A Normal, non-informative prior assumption on $\theta$
+2. Normal $\theta$ based on the sample statistics
+3. Normal $\theta$ based on the bootstrap statistics
   - A bootstrap distribution was simulated in the code using the sample.
-4. Gamma and conjugate prior
+4. Gamma Prior
 
+### Prior simulations
 
 ```{r prior distribution on sample/bootstrap statistics, fig.height=3}
 set.seed(42)
@@ -284,7 +285,7 @@ ggarrange(p1, p2)
 #   labs(xlab = 'Ratio', ylab = '', title = 'Noninformative Prior: N(.01, 50)')
 ```
 
-
+### Posterior and Posterior Predictive Simulations
 
 ```{r JAGs on Sample Stats prior, fig.height=3}
 set.seed(42)
@@ -323,8 +324,8 @@ model <- jags.model(textConnection(model_string),
 update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu")
-                                 n.iter=100000,
+                                 variable.names=c("mu"),
+                                 n.iter=10000,
                                  progress.bar="none")
 # Summarize and check diagnostics
 summary(posterior_sample)
@@ -421,7 +422,6 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 ```
 
-
 ```{r JAGS on Noninformative Prior, fig.height=3}
 set.seed(42)
 ##############################################################################
@@ -479,8 +479,6 @@ hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
-
-
 
 ```{r JAGS on gamma prior, fig.height=3}
 set.seed(42)
@@ -546,71 +544,14 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 ```
 
-| Prior | Likelihood | Posterior CredI|
-|-------|------------|----------------|
-|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| asdf|
-|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| asdf|
-|mu ~ N(0, 50)| x ~ N(mu, s)|asdf|
-|$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|asdf|
-
-```{r JAGS on exponential prior, fig.height=3}
-set.seed(42)
-##############################################################################
-############## ASSUMPTIONS BASED ON EXPONENTIAL PRIOR  #######################
-##############################################################################
-
-model_string <- "model{
-
-  # Likelihood
-  for (i in 1:n){
-    x[i] ~ dgamma(shape,rate)
-    # x[i] ~ dexp(lambda)
-  }
-
-  # Prior
-  shape ~ dexp(.8)
-  rate ~ dexp(.8)
-  # lambda ~ dexp(.00001)
-}"
-
-# Compile the model
-dataList = list(x=raw_posted_ratio, n=n)
-model <- jags.model(textConnection(model_string),
-                    data=dataList,
-                    n.chains=5, quiet = T) 
-
-update(model, 2000, progress.bar="none")
-
-posterior_sample <- coda.samples(model, 
-                                 variable.names=c("shape", 'rate'),
-                                 n.iter=N,
-                                 progress.bar="none")
-# Summarize and check diagnostics
-summary(posterior_sample)
+| Prior | Likelihood | Posterior CredI| Posterior Predictive I|
+|-------|------------|----------------| jkl|
+|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| asdf| JKL|
+|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| asdf| jkl|
+|mu ~ N(0, 50)| x ~ N(mu, s)|asdf| jkl|
+|$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|asdf| jlk|
 
 
-## --------------------------------
-# plot(posterior_sample)
-
-#######################################################
-#################### DIAGNOSTICS ######################
-#######################################################
-
-# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
-# saveType = "jpg")
-
-#######################################################
-########### POSTERIOR PREDICTIVE DISTRIBUTION #########
-#######################################################
-
-theta_sim = as.matrix(posterior_sample)
-x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
-# quantile(x_sim, c(0.025, 0.975))
-hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-     main = "Posterior preditive distribution")
-lines(density(x_sim))
-abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
-```
 
 ```{r FILTER BY MANUFACTURER, fig.height=3}
 set.seed(42)
@@ -705,13 +646,6 @@ summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
 plot(posterior_sample)
 posterior_sample_values = as.matrix(posterior_sample)
-# source('DBDA2E-utilities.R')
-# posterior_sample_values = as.matrix(posterior_sample)
-# mu0 = posterior_sample_values[, "mu0"]
-# #mu1 = posterior_sample_values[, "mu[1]"]
-# #mu2 = posterior_sample_values[, "mu[2]"]
-# #mu3 = posterior_sample_values[, "mu[3]"]
-# plotPost(mu0, main = "mu0")
 
 matmu2<-posterior_sample_values[,(1:4)]
 dens <- apply(matmu2, 2, density)
