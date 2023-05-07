@@ -201,16 +201,15 @@ quantile(boot_means, c(.025,.975))
 
 ### Prior Assumptions
 
-For simplicity, I assume the ratio of speeds is normally distributed.
+For simplicity, of what we have learned. I will first assume the ratio of speeds is normally distributed.
 
 $\theta$ is the the true mean ratio of speed to speed limit.
 
-We will consider three priors:
+We will consider four priors:
 
 1. A Normal, non-informative prior assumption on $\theta$
 2. Normal $\theta$ based on the sample statistics
 3. Normal $\theta$ based on the bootstrap statistics
-  - A bootstrap distribution was simulated in the code using the sample.
 4. Gamma Prior
 
 ### Prior simulations
@@ -231,9 +230,8 @@ tau_sim_prior = rgamma(Nrep, shape = shape, rate = rate)
 p1 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1) +
-  labs(xlab = 'Ratio', ylab = '', title = 'Sample Statistics Prior: N(xbar, s)')
+  labs(xlab = 'Ratio', ylab = '', title = 'N(xbar, s)')
 
-set.seed(42)
 #######################################################################
 ########## PRIOR DISTRIBUTION ON BOOTSTRAPPED STATISTICS ##############
 #######################################################################
@@ -242,47 +240,32 @@ shape <- round(mean(boot_sds) * rate)
 
 mu_sim_prior = rnorm(Nrep, mean(boot_means), mean(boot_sds))
 tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
-# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
 p2 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1) +
-  labs(xlab = 'Ratio', ylab = '', title = 'Bootstrapped Prior: N(boot_mean, s)')
+  labs(xlab = 'Ratio', ylab = '', title = 'N(boot_mean, s)')
 
 ggarrange(p1, p2)
-
-
 ```
 
 ```{r Noninformative and gamma priors, fig.height=3}
 
 mu_sim_prior = rnorm(Nrep, .01, 50)
 tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
-# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
 p1 <- ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
   geom_point(color = "skyblue", alpha = 0.4) +
   geom_density_2d(color = "orange", linewidth = 1) +
-  labs(xlab = 'Ratio', ylab = '', title = 'Noninformative Prior: N(.01, 50)')
+  labs(xlab = 'Ratio', ylab = '', title = 'Noninform. N(.01, 50)')
 
 
 shape_prior <- rnorm(Nrep, 95, 4)
 rate_prior <- rnorm(Nrep, 75, 4)
 mean_prior <- shape_prior / rate_prior
-# mu_sim_prior = rnorm(Nrep, .01, 50)
-# tau_sim_prior =rgamma(Nrep, shape = shape, rate = rate)
-# sigma_sim_prior = 1 / sqrt(tau_sim_prior)
-# sim_prior = data.frame(mu_sim_prior, tau_sim_prior, sigma_sim_prior)
 p2 <- ggplot(NULL, aes(mean_prior)) + 
   geom_histogram(color = 'orange', bins = 100) + 
-  labs(xlab = 'Mean', ylab = '', title = 'Gamma Prior with Shape, Rate ~ N')
+  labs(xlab = 'Mean', ylab = '', title = 'Shape, Rate ~ N')
 
 ggarrange(p1, p2)
-
-# ggplot(NULL, aes(mu_sim_prior, tau_sim_prior)) +
-#   geom_point(color = "skyblue", alpha = 0.4) +
-#   geom_density_2d(color = "orange", linewidth = 1) +
-#   labs(xlab = 'Ratio', ylab = '', title = 'Noninformative Prior: N(.01, 50)')
 ```
 
 ### Posterior and Posterior Predictive Simulations
@@ -328,7 +311,7 @@ posterior_sample <- coda.samples(model,
                                  n.iter=10000,
                                  progress.bar="none")
 # Summarize and check diagnostics
-summary(posterior_sample)
+# summary(posterior_sample)
 
 
 ## --------------------------------
@@ -349,7 +332,7 @@ theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], 0.2696776)
 # quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-     main = "Posterior preditive distribution")
+     main = "Posterior preditive: Sample statistics (Normal-Normal)")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
@@ -393,7 +376,7 @@ posterior_sample <- coda.samples(model,
                                  n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
-summary(posterior_sample)
+# summary(posterior_sample)
 
 
 ## --------------------------------
@@ -412,9 +395,9 @@ summary(posterior_sample)
 
 theta_sim = as.matrix(posterior_sample)
 x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"], s)
-quantile(x_sim, c(0.025, 0.975))
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-     main = "Posterior preditive distribution")
+     main = "Posterior preditive: Bootstrap (Normal-Normal)")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
@@ -454,7 +437,7 @@ posterior_sample <- coda.samples(model,
                                  n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
-summary(posterior_sample)
+# summary(posterior_sample)
 
 
 ## --------------------------------
@@ -472,10 +455,10 @@ summary(posterior_sample)
 #######################################################
 
 theta_sim = as.matrix(posterior_sample)
-x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"]) #, theta_sim[, "sigma"])
+x_sim = rnorm(nrow(theta_sim), theta_sim[, "mu"])
 # quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-     main = "Posterior preditive distribution")
+     main = "Posterior preditive: Noninformative Normal-Normal")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
@@ -516,7 +499,7 @@ posterior_sample <- coda.samples(model,
                                  n.iter=N,
                                  progress.bar="none")
 # Summarize and check diagnostics
-summary(posterior_sample)
+# summary(posterior_sample)
 
 
 ## --------------------------------
@@ -535,21 +518,25 @@ summary(posterior_sample)
 
 theta_sim = as.matrix(posterior_sample)
 x_sim = rgamma(nrow(theta_sim), theta_sim[,'shape'], theta_sim[,'rate'])
-quantile(x_sim, c(0.025, 0.975))
+# quantile(x_sim, c(0.025, 0.975))
 hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
-     main = "Posterior preditive distribution")
+     main = "Posterior preditive: Gamma prior/likelihood")
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 
 ```
 
-| Prior | Likelihood | Posterior CredI| Posterior Predictive I|
-|-------|------------|----------------| jkl|
-|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| asdf| JKL|
-|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| asdf| jkl|
-|mu ~ N(0, 50)| x ~ N(mu, s)|asdf| jkl|
-|$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|asdf| jlk|
+| Prior | Likelihood | Posterior CredI| Posterior Predictive Interval|
+|-------|------------|----------------|----|
+|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| (1.29, 1.39)| (0.80, 1.87)|
+|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| (1.28, 1.38)| (0.90, 1.75)|
+|mu ~ N(0, 50)| x ~ N(mu, s)|(1.28, 1.39)| (-0.62,  3.29)|
+|$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|(1.2873, 1.2924)|(1.045, 1.56)|
+
+There is a posterior probability of 95% that the true ratio of `speed` to `posted_speed` is between the interval bounds set above in the column `Posterior CredI` for each respective prior and likeilhood.
+
+There is a posterior predictive probability of 95% that, given another sample of size 60, we will observe the true ratio of `speed` to `posted_speed` being between the interval bounds set above in the column `Posterior Predictive Interval` for each respective prior and likelihood.
 
 
 
@@ -642,9 +629,9 @@ posterior_sample <- coda.samples(model,
                                                     "sigma_mu"),
                                  n.iter = 10000)
 
-summary(posterior_sample)
+# summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
-plot(posterior_sample)
+# plot(posterior_sample)
 posterior_sample_values = as.matrix(posterior_sample)
 
 matmu2<-posterior_sample_values[,(1:4)]
