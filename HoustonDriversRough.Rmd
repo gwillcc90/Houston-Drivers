@@ -9,7 +9,7 @@ subtitle: An Analysis of Moving Violations in Houston
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(echo = F, eval = F)
 ```
 
 ## Introduction 
@@ -191,10 +191,10 @@ for (i in 1:N)
 # qqnorm(boot_means)
 # qqline(boot_means)
 
-# mean(boot_means)
-# sd(boot_means)
-# 
-# mean(boot_sds)
+mean(boot_means)
+sd(boot_means)
+
+mean(boot_sds)
 # 
 quantile(boot_means, c(.025,.975))
 ```
@@ -300,25 +300,16 @@ model_string <- "model{
   for (i in 1:n){
     x[i] ~ dnorm(mu, 1 / sigma ^ 2)
   }
-  #sigma <- .05
-  
+  # Sample sd with size 60
+  sigma <- 0.2149536
 
   # Prior
   mu ~ dnorm(mu0, 1 / tau0 ^ 2)
   
-  # Sample mean with size 30
-  #mu0 <-  1.393571
-  
   # Sample mean ith size 60
   mu0 <- 1.340332
   
-  tau0 <- 1 / 0.04827723 # Actually the mean's SD
-  
-  # Sample sd with size 30
-  #sigma <- 0.2696776
-  
-  # Sample sd with size 60
-  sigma <- 0.2149536
+  tau0 <- 1 / .02745854 ^ 2
 
 }"
 
@@ -332,7 +323,7 @@ model <- jags.model(textConnection(model_string),
 update(model, 2000, progress.bar="none")
 
 posterior_sample <- coda.samples(model, 
-                                 variable.names=c("mu"),# 'sigma'),
+                                 variable.names=c("mu")
                                  n.iter=100000,
                                  progress.bar="none")
 # Summarize and check diagnostics
@@ -430,6 +421,7 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 ```
 
+
 ```{r JAGS on Noninformative Prior, fig.height=3}
 set.seed(42)
 ##############################################################################
@@ -445,7 +437,7 @@ model_string <- "model{
 
   sigma <- .21
   # Prior
-  mu ~ dnorm(1.5, 50)
+  mu ~ dnorm(1.5, 1 / 50 ^2)
 
 }"
 
@@ -487,6 +479,8 @@ hist(x_sim, freq = FALSE, xlab = "Ratio of raw speed to posted limit",
 lines(density(x_sim))
 abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 ```
+
+
 
 ```{r JAGS on gamma prior, fig.height=3}
 set.seed(42)
@@ -551,6 +545,13 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 
 ```
+
+| Prior | Likelihood | Posterior CredI|
+|-------|------------|----------------|
+|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| asdf|
+|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| asdf|
+|mu ~ N(0, 50)| x ~ N(mu, s)|asdf|
+|$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|asdf|
 
 ```{r JAGS on exponential prior, fig.height=3}
 set.seed(42)
