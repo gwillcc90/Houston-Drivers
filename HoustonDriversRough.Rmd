@@ -45,7 +45,6 @@ The size of roads and accidents in the most heavily populated areas makes for a 
 Whilst nearly impossible to speculate any city and highway infrastructure changes, it is possible that increasing the speed limits may alleviate traffic. Therefore, the purpose of this paper is to use frequentist and Bayesian analysis on the data given about speeding tickets to infer on the population parameters of:
 
 - the ratio of actual speed versus posted speed limit
-- the number of stops per day
 - is there a difference among drivers of different car brands?
 
 with the hopes of getting better insight into the traffic problem and hypothesizing solutions.
@@ -748,7 +747,7 @@ The secondary test was to see if there is a statistically significant difference
 
 ### Future Direction
 
-
+For future directions I will test different variations of a Gamma prior on the analysis of the true ratio of speed. I will also look at stops-per-day in general, stops per day by the person's race, time between stops, and look at the difference in groups such as sports cars versus non-sports cars or car origin like Europe versus the U.S.A.
 
 
 ## References
