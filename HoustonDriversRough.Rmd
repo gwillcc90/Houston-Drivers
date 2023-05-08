@@ -578,6 +578,9 @@ ggplot(d, aes(x = vehicle_make, y = ratio)) +
        x = 'Make', y = 'Ratio')
 ```
 
+### JAGS ANOVA
+
+I perform two tests: one using the Normal-Normal model and another using a Gamma prior and likelihood.
 
 ```{r JAGS ANOVA on manufacturers, fig.height=3}
 set.seed(42)
@@ -699,3 +702,38 @@ plot(NA, xlim=range(sapply(dens, "[", "x")),
 dum<-mapply(lines, dens, col=1:length(dens))
 ```
 
+The graphs show that there may not be a difference in means, but we can measure this by measuring the *effect size*. If two groups show to have a statistically significant difference in means, then the whole test shows that all means are not equal. For this problem, it's not impossible to find the *effect size* for all groups, but for a large number of groups, there will be $_{n}C_2$ groups. Therefore I will only test the maximum difference. This still requires finding the difference in means for the groups.
+
+We observe the largest difference in means is in groups 1 and 2
+
+```{r}
+set.seed(42)
+diff1 <- 0
+diff2 <- 0
+mu_diff <- 0
+
+for(i in 1 : (ncol(matmu2)-1))
+{
+  for (j in (i+1):ncol(matmu2))
+  {
+    mu_diff1 <- mean(matmu2[,(i)] - matmu2[,(j)])
+    if(mu_diff < mu_diff1){
+      mu_diff <- mu_diff1
+      diff1 <- i
+      diff2 <- j
+    }
+  }
+}
+
+# SD for effect size
+sd <- (posterior_sample_values[,(7)] + posterior_sample_values[,(8)]) / (posterior_sample_values[,(3)] ^2 + posterior_sample_values[,(4)] ^2)
+
+# Effect size
+# quantile(mu_diff / sd, c(.95))
+
+```
+
+
+## Conclusion
+
+## References
