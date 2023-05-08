@@ -308,8 +308,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-# diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
-# saveType = "jpg")
+diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
+saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -373,8 +373,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
-# saveType = "jpg")
+diagMCMC(posterior_sample,saveName = "diagMCMCeg2",
+saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -434,8 +434,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
-# saveType = "jpg")
+diagMCMC(posterior_sample,saveName = "diagMCMCeg3",
+saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -491,8 +491,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-# diagMCMC(posterior_sample,saveName = "diagMCMCeg",
-# saveType = "jpg")
+diagMCMC(posterior_sample,saveName = "diagMCMCeg4",
+saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -626,10 +626,16 @@ posterior_sample <- coda.samples(model,
                                                     "sigma_mu"),
                                  n.iter = 10000)
 
+
+diagMCMC(posterior_sample,saveName = "diagMCMCeg5",
+saveType = "jpg")
+
 # summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
 # plot(posterior_sample)
 posterior_sample_values = as.matrix(posterior_sample)
+
+
 
 matmu2<-posterior_sample_values[,(1:4)]
 dens <- apply(matmu2, 2, density)
@@ -680,6 +686,9 @@ posterior_sample <- coda.samples(model,
                                                     "sigma_rate", 'mu_shape',
                                                     'mu_rate'),
                                  n.iter = 10000)
+
+diagMCMC(posterior_sample,saveName = "diagMCMCeg6",
+saveType = "jpg")
 
 # summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
