@@ -1,7 +1,7 @@
 ---
 title: "Houston Drivers Go Brrrrr"
 author: "Will Curkan"
-date: "2023-04-15"
+date: "2023-05-9"
 output:
   pdf_document: default
   html_document: default
@@ -132,7 +132,7 @@ raw_posted_ratio <- data$ratio
 
 raw_posted_ratio <- raw_posted_ratio[ raw_posted_ratio > 1 & raw_posted_ratio < 2.5]
 
-length(raw_posted_ratio)
+# length(raw_posted_ratio)
 
 # Remove the speed ratios that became NA
 # due to an undocumented speed 
@@ -167,8 +167,8 @@ hist(x, main = 'Distribution of a Random Sample of Size 60',
      xlab = 'Ratio')
 ```
 
-```{r BOOTSTRAPPED STATISTICS}
-# set.seed(42)
+```{r bootstrap, echo = F}
+set.seed(42)
 n <- length(x)
 
 N <- 10^5
@@ -183,20 +183,8 @@ for (i in 1:N)
   boot_sds[i] <- sd(boot_sample)
 }
 
-# hist(boot_means)
-
-
-######################### SKEWED ##############
-# qqnorm(boot_means)
-# qqline(boot_means)
-
-# mean(boot_means)
-# sd(boot_means)
-# 
-# mean(boot_sds)
-# # 
-# quantile(boot_means, c(.025,.975))
 ```
+
 --------------------------------------------------------------------------
 
 ### Prior Assumptions
@@ -477,11 +465,6 @@ model_string <- "model{
   }
 
   # Prior
-  # Sigma is .25
-  # shape ~ dnorm(96, 1 / 2^2)
-  # rate ~ dnorm(75, 1 / 2^2)
-  
-  # Sigma is 4
   shape ~ dnorm(96, 1 / .5^2)
   rate ~ dnorm(75, 1 / .3^2)
 }"
@@ -527,26 +510,26 @@ abline(v = quantile(x_sim, c(0.025, 0.975)), col = "orange")
 
 ```
 
-Tables for our area estimates:
+Tables for the area estimates:
 
 | Prior | Likelihood | Posterior CredI| Posterior Predictive Interval|
 |-------|------------|----------------|----|
-|mu ~ N($\bar{x}$, s*)|x ~ N(mu, s)| (1.29, 1.39)| (0.80, 1.87)|
-|mu ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| (1.28, 1.38)| (0.90, 1.75)|
-|mu ~ N(0, 50)| x ~ N(mu, s)|(1.28, 1.39)| (-0.62,  3.29)|
+|$\mu$ ~ N($\bar{x}$, s*)|x ~ N(mu, s)| (1.29, 1.39)| (0.80, 1.87)|
+|$\mu$ ~ N($\bar{x}$*, s*)|x ~ N(mu, s)| (1.28, 1.38)| (0.90, 1.75)|
+|$\mu$ ~ N(0, 50)| x ~ N(mu, s)|(1.28, 1.39)| (-0.62,  3.29)|
 |$\alpha$ ~ N(96, 4), $\beta$ ~ N(75, 11)| x ~ Gamma($\alpha$, $\beta$)|(1.2873, 1.2924)|(1.045, 1.56)|
 
 |Technique| CI|
 |---------|---|
-|Bootstrap|(1.3 1.4)|
+|Bootstrap|(1.3, 1.4)|
 
-There is a posterior probability of 95% that the true ratio of `speed` to `posted_speed` is between the interval bounds set above in the column `Posterior CredI` for each respective prior and likeilhood.
+There is a posterior probability of 95% that the true ratio of `speed` to `posted_speed` is between the interval bounds set above in the column `Posterior CredI` for each respective prior and likelihood.
 
 There is a posterior predictive probability of 95% that, given another sample of size 60, we will observe the true ratio of `speed` to `posted_speed` being between the interval bounds set above in the column `Posterior Predictive Interval` for each respective prior and likelihood.
 
 ### Anova Test
 
-I will also conduct an ANOVA test for the driver's speed-ratios of the four different vehicle makes: FORD, CHEVY, TOYOTA, and HONDA to see if there is a statistically significant difference in the speeds of speeding speeders (this isn't a mistake).
+I will also conduct an ANOVA test for the driver's speed-ratios of the four different vehicle makes: FORD, CHEVY, TOYOTA, and HONDA to see if there is a statistically significant difference of the *speeds of speeding speeders* (this isn't a mistake).
 
 To do this without using the entire data, I first found regular expressions to make sure vehicle makes listed like TOYO and TOYOTA became a single make, TOYOTA. Then randomly sampled the indices of those four manufacturers to create a size 80 subset of the original dataframe (20 for each manufacturer).
 
@@ -648,7 +631,71 @@ matmu2<-posterior_sample_values[,(1:4)]
 dens <- apply(matmu2, 2, density)
 plot(NA, xlim=range(sapply(dens, "[", "x")), 
      ylim=range(sapply(dens, "[", "y")), 
-     main="mu1-mu4", frame.plot=FALSE)
+     main="Mu1-Mu4: Normal Assumptions", frame.plot=FALSE)
+dum<-mapply(lines, dens, col=1:length(dens))
+```
+
+```{r, fig.height = 3}
+set.seed(42)
+y = d$ratio
+x = d$vehicle_make
+
+n_groups = nlevels(d$vehicle_make)
+
+n = length(y)
+  
+  
+model_string <- "model{
+  # Likelihood
+  for (i in 1:n){
+  y[i] ~ dgamma(shape[x[i]], rate[x[i]])
+  }
+  
+  
+  # Prior
+  for(i in 1:n_groups) {
+  shape[i] ~ dnorm(mu_shape, 1 / sigma_shape^2)
+  rate[i] ~ dnorm(mu_rate, 1 / sigma_rate^2)
+  }
+  sigma_shape ~ dexp(3)
+  sigma_rate ~ dexp(3)
+  
+  # Hypers
+  mu_shape ~ dnorm(96, 1 / .5^2)
+  mu_rate ~ dnorm(75, 1 / .3^2)
+}"
+  
+dataList = list (y = y, n = n, n_groups =n_groups, x = x)
+model <- jags.model(file = textConnection(model_string), 
+                    data = dataList,
+                    n.chains = 5, quiet = T)
+
+update(model, n.iter = 3000)
+posterior_sample <- coda.samples(model,
+                                 variable.names = c("shape", "rate", "sigma_shape", 
+                                                    "sigma_rate", 'mu_shape',
+                                                    'mu_rate'),
+                                 n.iter = 10000)
+
+# summary(posterior_sample)
+par(mar=c(1, 1, 1, 1))
+# plot(posterior_sample)
+posterior_sample_values = as.matrix(posterior_sample)
+
+# Get the shape and rate values
+matmu2<-posterior_sample_values[,(3:10)]
+
+# Calculate the mean of each group
+matmu2 <- cbind(matmu2[,(5)] / matmu2[,(1)], 
+        matmu2[,(6)] / matmu2[,(2)],
+        matmu2[,(7)] / matmu2[,(3)],
+        matmu2[,(8)] / matmu2[,(4)])
+
+# Plot
+dens <- apply(matmu2, 2, density)
+plot(NA, xlim=range(sapply(dens, "[", "x")), 
+     ylim=range(sapply(dens, "[", "y")), 
+     main="Mu1-Mu4: Shape / Rate", frame.plot=FALSE)
 dum<-mapply(lines, dens, col=1:length(dens))
 ```
 
