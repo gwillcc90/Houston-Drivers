@@ -23,7 +23,6 @@ If you've been stopped for a traffic violation, you know the citation shows the 
 |speed  | Speed of vehicle|
 |posted_speed| Posted speed limit|
 |vehicle_make| Brand of vehicle|
-|date| date citation was issued|
 
 But just looking at those features individually is neither descriptive nor interesting. I create a new feature called `ratio`.
 
@@ -119,8 +118,6 @@ data$ratio <- data$speed / data$posted_speed
 data = data %>%
   filter(!is.na(ratio))
 ```
-
-### EDA
 
 ```{r FILTERED RATIO AND PLOT, fig.height=3}
  ############ REDO THE RAW_POSTED_RATIO #############
@@ -308,8 +305,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg1",
+# saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -373,8 +370,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg2",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg2",
+# saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -434,8 +431,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg3",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg3",
+# saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -491,8 +488,8 @@ posterior_sample <- coda.samples(model,
 #################### DIAGNOSTICS ######################
 #######################################################
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg4",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg4",
+# saveType = "jpg")
 
 #######################################################
 ########### POSTERIOR PREDICTIVE DISTRIBUTION #########
@@ -524,7 +521,7 @@ Tables for the area estimates:
 
 There is a posterior probability of 95% that the true ratio of `speed` to `posted_speed` is between the interval bounds set above in the column `Posterior CredI` for each respective prior and likelihood.
 
-There is a posterior predictive probability of 95% that, given another sample of size 60, we will observe the true ratio of `speed` to `posted_speed` being between the interval bounds set above in the column `Posterior Predictive Interval` for each respective prior and likelihood.
+There is a posterior predictive probability of 95% that, given another sample of size 60, we will observe the ratio of `speed` to `posted_speed` being between the interval bounds set above in the column `Posterior Predictive Interval` for each respective prior and likelihood.
 
 -------------------------------------------------------------------------
 
@@ -627,8 +624,8 @@ posterior_sample <- coda.samples(model,
                                  n.iter = 10000)
 
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg5",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg5",
+# saveType = "jpg")
 
 # summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
@@ -687,8 +684,8 @@ posterior_sample <- coda.samples(model,
                                                     'mu_rate'),
                                  n.iter = 10000)
 
-diagMCMC(posterior_sample,saveName = "diagMCMCeg6",
-saveType = "jpg")
+# diagMCMC(posterior_sample,saveName = "diagMCMCeg6",
+# saveType = "jpg")
 
 # summary(posterior_sample)
 par(mar=c(1, 1, 1, 1))
@@ -712,7 +709,7 @@ plot(NA, xlim=range(sapply(dens, "[", "x")),
 dum<-mapply(lines, dens, col=1:length(dens))
 ```
 
-The graphs show that there may not be a difference in means, but we can measure this by measuring the *effect size*. If two groups show to have a statistically significant difference in means, then the whole test shows that all means are not equal. For this problem, it's not impossible to find the *effect size* for all groups, but for a large number of groups, there will be $_{n}C_2$ groups. Therefore I will only test the maximum difference. This still requires finding the difference in means for the groups.
+The graphs show that there may not be a difference in means, but we can check this by calculating the *effect size*. If two groups show to have a statistically significant difference in means, then the whole test shows that all means are not equal. For this problem, it's not impossible to find the *effect size* for all groups, but for a large number of groups, there will be $_{n}C_2$ groups. Therefore I will only test the maximum difference. This still requires finding the difference in means for the groups.
 
 We observe the largest difference in means is in groups 1 and 2
 
@@ -740,19 +737,19 @@ sd <- (posterior_sample_values[,(7)] + posterior_sample_values[,(8)]) / (posteri
 
 # Effect size
 # quantile(mu_diff / sd, c(.95))
-mean(mu_diff / sd)
+# mean(mu_diff / sd)
 
 ```
 
-Effect size: ~ < .2; small effect; I conclude there is not a statistically significant difference.
+Effect size < .2; small effect; I conclude there is not a statistically significant difference.
 
 -------------------------------------------------------------------------
 
 ## Conclusion
 
-The main test performed was to find the true ratio of speed among all cars stopped for speeding violations. Using the frequentist's bootstrap technique and Bayesian tests that assume normally distributed data we observe intervals of the true mean ratio between approximately (1.3, 1.4). The downfall in Normal-prior assumptions is seen in the Posterior Predictive distributions which gives bad, unreasonable estimates for a future sample of size 60: the condition that the ratio is greater than 1 is not filled and the intervals are massive in terms of our problem.
+The main test performed was to find the true ratio of speed among all cars stopped for speeding violations. Using the frequentist's bootstrap technique and Normal-Normal Bayesian tests we observe intervals of the true mean ratio between approximately (1.3, 1.4). The downfall in Normal prior assumptions is seen in the Posterior Predictive distributions which gives bad, unreasonable estimates for a future sample of size 60: the condition that the ratio is greater than 1 is not filled and the intervals are massive in terms of our problem.
 
-When assuming a Gamma distribution, the credible interval narrows greatly and is contained  within (1.287, 1.292). The Posterior predictive distribution shows reasonable estimates of possibly containing the true mean ratio. Given the problem, it is reasonable to think that if we take another sample of size 60 we will observe a mean speed-ratio of between .05 to .56 above the speed limit.
+When assuming a Gamma distribution, the credible interval narrows greatly and is contained  within (1.287, 1.292). The Posterior predictive distribution shows reasonable estimates of possibly containing the true mean ratio. Given the problem and generated Posterior Predictive distribution, it is reasonable to think that if we take another sample of size 60 we will observe a mean speed-ratio of between .05 to .56 above the speed limit.
 
 The secondary test was to see if there is a statistically significant difference among the speeds of drivers of different vehicle makes. From the initial boxplot, it is apparent that there may not be a statistically significant difference, but it is still possible. A Normal-Normal show that the distributions contain one another, and using Gamma prior and likelihood shows that they are even more similar than the Normal assumptions. We confirm this by observing an *effect size* magnitude of approximately .2, which is small and concludes there is not a statistically significant difference.
 
