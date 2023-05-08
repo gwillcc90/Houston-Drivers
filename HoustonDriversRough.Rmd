@@ -730,10 +730,14 @@ sd <- (posterior_sample_values[,(7)] + posterior_sample_values[,(8)]) / (posteri
 
 # Effect size
 # quantile(mu_diff / sd, c(.95))
+mean(mu_diff / sd)
 
 ```
 
+Effect size: ~ .2; small effect; I conclude there is not a statistically significant difference.
 
 ## Conclusion
+
+
 
 ## References
